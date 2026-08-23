@@ -1,756 +1,526 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090909">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080912" />
 
   <title>स्वरAJ — Music</title>
 
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
 
-<!-- =====================================================
-     MOBILE HEADER
-===================================================== -->
-
-<header class="mobile-header">
-
-  <button
-    class="icon-btn"
-    id="mobileMenuBtn"
-    aria-label="Menu"
-  >
-    <i data-lucide="menu"></i>
-  </button>
-
-  <div class="brand mobile-brand">
-
-    <div class="brand-logo">
-      <i data-lucide="music-2"></i>
-    </div>
-
-    <span>स्वरAJ</span>
-
+  <!-- Animated background -->
+  <div class="background">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid"></div>
+    <div id="particles"></div>
   </div>
 
-  <button
-    class="icon-btn"
-    aria-label="More"
-  >
-    <i data-lucide="more-vertical"></i>
-  </button>
+  <!-- ================= SIDEBAR ================= -->
 
-</header>
+  <aside class="sidebar">
 
-
-<!-- =====================================================
-     SIDEBAR
-===================================================== -->
-
-<aside class="sidebar">
-
-  <div class="brand sidebar-brand">
-
-    <div class="brand-logo">
-      <i data-lucide="music-2"></i>
-    </div>
-
-    <div class="brand-text">
-      <strong>स्वरAJ</strong>
-      <small>Music</small>
-    </div>
-
-  </div>
-
-
-  <nav class="main-nav">
-
-    <button
-      class="nav-item active"
-      data-page="home"
-    >
-      <i data-lucide="home"></i>
-      <span>Home</span>
-    </button>
-
-
-    <button
-      class="nav-item"
-      data-page="searchPage"
-    >
-      <i data-lucide="search"></i>
-      <span>Search</span>
-    </button>
-
-
-    <button
-      class="nav-item"
-      data-page="library"
-    >
-      <i data-lucide="library"></i>
-      <span>Your Library</span>
-    </button>
-
-  </nav>
-
-
-  <div class="sidebar-heading">
-    YOUR MUSIC
-  </div>
-
-
-  <nav class="main-nav">
-
-    <button
-      class="nav-item"
-      data-page="liked"
-    >
-      <i data-lucide="heart"></i>
-      <span>Liked Songs</span>
-    </button>
-
-
-    <button
-      class="nav-item"
-      data-page="albums"
-    >
-      <i data-lucide="disc-3"></i>
-      <span>Albums</span>
-    </button>
-
-
-    <button
-      class="nav-item"
-      data-page="artists"
-    >
-      <i data-lucide="mic-2"></i>
-      <span>Artists</span>
-    </button>
-
-  </nav>
-
-
-  <div class="sidebar-bottom">
-
-    <div class="server-status">
-
-      <span class="status-dot"></span>
+    <div class="brand">
+      <div class="brand-orb">
+        <span>♪</span>
+      </div>
 
       <div>
-        <strong>SwarAJ Online</strong>
-        <small>Your music server</small>
+        <strong>स्वरAJ</strong>
+        <small>YOUR MUSIC WORLD</small>
+      </div>
+    </div>
+
+    <nav class="main-nav">
+
+      <button class="nav-item active" data-section="home">
+        <span class="nav-icon">⌂</span>
+        <span>Home</span>
+      </button>
+
+      <button class="nav-item" data-section="search">
+        <span class="nav-icon">⌕</span>
+        <span>Search</span>
+      </button>
+
+      <button class="nav-item" data-section="library">
+        <span class="nav-icon">▣</span>
+        <span>Library</span>
+      </button>
+
+      <button class="nav-item" data-section="liked">
+        <span class="nav-icon">♡</span>
+        <span>Liked Songs</span>
+      </button>
+
+    </nav>
+
+    <div class="sidebar-title">
+      EXPLORE
+    </div>
+
+    <nav class="category-nav">
+
+      <button class="category-item" data-category="Bhakti">
+        <span>🪔</span>
+        <span>Bhakti</span>
+      </button>
+
+      <button class="category-item" data-category="Love">
+        <span>♥</span>
+        <span>Love</span>
+      </button>
+
+      <button class="category-item" data-category="Energetic">
+        <span>⚡</span>
+        <span>Energetic</span>
+      </button>
+
+      <button class="category-item" data-category="Emotional">
+        <span>☁</span>
+        <span>Emotional</span>
+      </button>
+
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="connection">
+        <span class="connection-dot"></span>
+        <span id="connectionText">Connecting...</span>
+      </div>
+    </div>
+
+  </aside>
+
+
+  <!-- ================= MAIN ================= -->
+
+  <main class="main">
+
+    <!-- Top bar -->
+
+    <header class="topbar">
+
+      <button id="mobileMenu" class="icon-button">
+        ☰
+      </button>
+
+      <div class="top-search">
+        <span>⌕</span>
+        <input
+          id="searchInput"
+          type="search"
+          placeholder="Search songs, artists, albums..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-button" id="refreshBtn" title="Refresh">
+          ↻
+        </button>
+
+        <button class="profile-button">
+          <span>AJ</span>
+        </button>
+      </div>
+
+    </header>
+
+
+    <!-- ================= HOME ================= -->
+
+    <section id="homeSection" class="page-section active">
+
+      <!-- Hero -->
+
+      <section class="hero">
+
+        <div class="hero-content">
+
+          <div class="hero-label">
+            <span class="pulse"></span>
+            YOUR PERSONAL MUSIC SPACE
+          </div>
+
+          <h1>
+            Music that feels
+            <span>alive.</span>
+          </h1>
+
+          <p>
+            Discover your favourite songs and experience music
+            in a completely new dimension.
+          </p>
+
+          <div class="hero-buttons">
+
+            <button id="heroPlay" class="primary-button">
+              <span>▶</span>
+              Play Music
+            </button>
+
+            <button id="heroShuffle" class="glass-button">
+              <span>⤨</span>
+              Shuffle
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- 3D album -->
+
+        <div class="hero-visual">
+
+          <div class="scene">
+
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
+
+            <div id="heroDisc" class="disc">
+
+              <div class="disc-cover">
+                <img
+                  id="heroCover"
+                  src="/images/default-cover.svg"
+                  alt="Album"
+                />
+              </div>
+
+              <div class="disc-center">
+                <span>♪</span>
+              </div>
+
+            </div>
+
+            <div class="floating-card card-a">
+              <span>♫</span>
+              <div>
+                <strong>स्वरAJ</strong>
+                <small>Premium Music</small>
+              </div>
+            </div>
+
+            <div class="floating-card card-b">
+              <span>♥</span>
+              <strong id="heroSongCount">0</strong>
+              <small>Songs</small>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- Quick categories -->
+
+      <section class="section-block">
+
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">DISCOVER</span>
+            <h2>Choose your mood</h2>
+          </div>
+        </div>
+
+        <div class="mood-grid">
+
+          <button class="mood-card mood-bhakti" data-category="Bhakti">
+            <div class="mood-icon">🪔</div>
+            <div>
+              <strong>Bhakti</strong>
+              <small>Devotional vibes</small>
+            </div>
+            <span class="mood-arrow">↗</span>
+          </button>
+
+          <button class="mood-card mood-love" data-category="Love">
+            <div class="mood-icon">♥</div>
+            <div>
+              <strong>Love</strong>
+              <small>Feel the moment</small>
+            </div>
+            <span class="mood-arrow">↗</span>
+          </button>
+
+          <button class="mood-card mood-energy" data-category="Energetic">
+            <div class="mood-icon">⚡</div>
+            <div>
+              <strong>Energetic</strong>
+              <small>Turn it up</small>
+            </div>
+            <span class="mood-arrow">↗</span>
+          </button>
+
+          <button class="mood-card mood-emotional" data-category="Emotional">
+            <div class="mood-icon">☁</div>
+            <div>
+              <strong>Emotional</strong>
+              <small>Music & feelings</small>
+            </div>
+            <span class="mood-arrow">↗</span>
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- Songs -->
+
+      <section class="section-block">
+
+        <div class="section-heading">
+
+          <div>
+            <span class="eyebrow">YOUR LIBRARY</span>
+            <h2>All Songs</h2>
+          </div>
+
+          <button class="text-button" id="showAllBtn">
+            Show all →
+          </button>
+
+        </div>
+
+        <div id="songsGrid" class="songs-grid">
+
+          <div class="loading-card">
+            <div class="loader"></div>
+            <span>Loading your music...</span>
+          </div>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+    <!-- ================= SEARCH ================= -->
+
+    <section id="searchSection" class="page-section">
+
+      <div class="page-title">
+        <span class="eyebrow">DISCOVER</span>
+        <h1>Search Music</h1>
+        <p>Find songs, artists and albums.</p>
+      </div>
+
+      <div class="large-search">
+        <span>⌕</span>
+        <input
+          id="largeSearchInput"
+          type="search"
+          placeholder="What do you want to listen to?"
+        />
+      </div>
+
+      <div id="searchResults" class="songs-grid search-results"></div>
+
+    </section>
+
+
+    <!-- ================= LIBRARY ================= -->
+
+    <section id="librarySection" class="page-section">
+
+      <div class="page-title">
+        <span class="eyebrow">YOUR COLLECTION</span>
+        <h1>Library</h1>
+        <p>Your complete music collection.</p>
+      </div>
+
+      <div id="libraryGrid" class="songs-grid"></div>
+
+    </section>
+
+
+    <!-- ================= LIKED ================= -->
+
+    <section id="likedSection" class="page-section">
+
+      <div class="liked-hero">
+
+        <div class="liked-icon">
+          ♥
+        </div>
+
+        <div>
+          <span class="eyebrow">PLAYLIST</span>
+          <h1>Liked Songs</h1>
+          <p id="likedCount">0 songs</p>
+        </div>
+
+      </div>
+
+      <div id="likedGrid" class="songs-grid"></div>
+
+    </section>
+
+
+    <!-- ================= CATEGORY ================= -->
+
+    <section id="categorySection" class="page-section">
+
+      <div class="page-title">
+        <span class="eyebrow">MOOD</span>
+        <h1 id="categoryTitle">Category</h1>
+        <p id="categoryDescription">Explore music for your mood.</p>
+      </div>
+
+      <div id="categoryGrid" class="songs-grid"></div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ================= PLAYER ================= -->
+
+  <div class="player">
+
+    <div class="player-song">
+
+      <div class="player-cover">
+        <img
+          id="playerCover"
+          src="/images/default-cover.svg"
+          alt="Now Playing"
+        />
+      </div>
+
+      <div class="player-info">
+        <strong id="playerTitle">No song playing</strong>
+        <span id="playerArtist">स्वरAJ</span>
+      </div>
+
+      <button id="likeButton" class="player-like">
+        ♡
+      </button>
+
+    </div>
+
+
+    <div class="player-center">
+
+      <div class="player-controls">
+
+        <button id="shuffleButton" title="Shuffle">
+          ⤨
+        </button>
+
+        <button id="previousButton" title="Previous">
+          |◀
+        </button>
+
+        <button id="playButton" class="play-button" title="Play">
+          ▶
+        </button>
+
+        <button id="nextButton" title="Next">
+          ▶|
+        </button>
+
+        <button id="repeatButton" title="Repeat">
+          ↻
+        </button>
+
+      </div>
+
+      <div class="progress-row">
+
+        <span id="currentTime">0:00</span>
+
+        <input
+          id="progress"
+          type="range"
+          min="0"
+          max="100"
+          value="0"
+        />
+
+        <span id="duration">0:00</span>
+
       </div>
 
     </div>
 
-  </div>
 
-</aside>
+    <div class="player-right">
 
-
-<!-- =====================================================
-     MAIN
-===================================================== -->
-
-<main class="main">
-
-
-<!-- =====================================================
-     TOP BAR
-===================================================== -->
-
-<div class="topbar">
-
-  <div class="navigation-buttons">
-
-    <button
-      class="round-btn"
-      aria-label="Back"
-    >
-      <i data-lucide="chevron-left"></i>
-    </button>
-
-    <button
-      class="round-btn"
-      aria-label="Forward"
-    >
-      <i data-lucide="chevron-right"></i>
-    </button>
-
-  </div>
-
-
-  <div class="search-box">
-
-    <i data-lucide="search"></i>
-
-    <input
-      id="search"
-      type="search"
-      placeholder="Search songs, artists, albums..."
-      autocomplete="off"
-    >
-
-  </div>
-
-
-  <button
-    class="profile-btn"
-    aria-label="Profile"
-  >
-    A
-  </button>
-
-</div>
-
-
-<!-- =====================================================
-     HOME PAGE
-===================================================== -->
-
-<section
-  id="home"
-  class="page active-page"
->
-
-
-<!-- HERO -->
-
-<section class="hero">
-
-  <div class="hero-content">
-
-    <div class="hero-badge">
-      <i data-lucide="sparkles"></i>
-      YOUR PERSONAL MUSIC
-    </div>
-
-    <h1>
-      Music for<br>
-      every moment.
-    </h1>
-
-    <p>
-      Listen to your favorite songs,
-      discover music and enjoy your
-      personal collection.
-    </p>
-
-    <div class="hero-buttons">
-
-      <button
-        id="heroPlayBtn"
-        class="primary-btn"
-      >
-        <i data-lucide="play"></i>
-        Play Music
-      </button>
-
-      <button
-        class="secondary-btn"
-        data-page="library"
-      >
-        <i data-lucide="library"></i>
-        Browse Library
-      </button>
-
-    </div>
-
-  </div>
-
-
-  <div class="hero-art">
-
-    <div class="disc">
-
-      <div class="disc-center">
-        <i data-lucide="music-2"></i>
-      </div>
-
-    </div>
-
-  </div>
-
-</section>
-
-
-<!-- QUICK PICKS -->
-
-<section class="section">
-
-  <div class="section-header">
-
-    <div>
-      <h2>Quick picks</h2>
-      <p>Jump back into your music</p>
-    </div>
-
-    <button
-      class="see-all"
-      data-page="library"
-    >
-      See all
-      <i data-lucide="chevron-right"></i>
-    </button>
-
-  </div>
-
-
-  <div
-    id="quickPicks"
-    class="quick-grid"
-  >
-
-    <div class="loading">
-      Loading songs...
-    </div>
-
-  </div>
-
-</section>
-
-
-<!-- CATEGORIES -->
-
-<section class="section">
-
-  <div class="section-header">
-
-    <div>
-      <h2>Browse by category</h2>
-      <p>Find music for every mood</p>
-    </div>
-
-  </div>
-
-
-  <div
-    id="categories"
-    class="category-grid"
-  >
-
-    <div class="loading">
-      Loading categories...
-    </div>
-
-  </div>
-
-</section>
-
-
-<!-- ALL SONGS -->
-
-<section class="section">
-
-  <div class="section-header">
-
-    <div>
-      <h2>All Songs</h2>
-      <p>Your complete music collection</p>
-    </div>
-
-    <span
-      id="songCount"
-      class="song-count"
-    >
-      0 songs
-    </span>
-
-  </div>
-
-
-  <div
-    id="songList"
-    class="song-list"
-  >
-
-    <div class="loading">
-      Loading songs...
-    </div>
-
-  </div>
-
-</section>
-
-</section>
-
-
-<!-- =====================================================
-     SEARCH PAGE
-===================================================== -->
-
-<section
-  id="searchPage"
-  class="page"
->
-
-  <div class="page-title">
-
-    <div class="page-title-icon">
-      <i data-lucide="search"></i>
-    </div>
-
-    <div>
-      <h1>Search</h1>
-
-      <p>
-        Find songs, artists and albums.
-      </p>
-    </div>
-
-  </div>
-
-
-  <div class="large-search">
-
-    <i data-lucide="search"></i>
-
-    <input
-      id="largeSearch"
-      type="search"
-      placeholder="What do you want to listen to?"
-      autocomplete="off"
-    >
-
-  </div>
-
-
-  <div
-    id="searchResults"
-    class="song-list"
-  ></div>
-
-</section>
-
-
-<!-- =====================================================
-     LIBRARY
-===================================================== -->
-
-<section
-  id="library"
-  class="page"
->
-
-  <div class="page-title">
-
-    <div class="page-title-icon">
-      <i data-lucide="library"></i>
-    </div>
-
-    <div>
-      <h1>Your Library</h1>
-
-      <p>
-        Your personal music collection.
-      </p>
-    </div>
-
-  </div>
-
-
-  <div
-    id="librarySongs"
-    class="song-list"
-  ></div>
-
-</section>
-
-
-<!-- =====================================================
-     LIKED
-===================================================== -->
-
-<section
-  id="liked"
-  class="page"
->
-
-  <div class="page-title">
-
-    <div class="page-title-icon liked-icon">
-      <i data-lucide="heart"></i>
-    </div>
-
-    <div>
-      <h1>Liked Songs</h1>
-
-      <p>
-        Songs you've saved.
-      </p>
-    </div>
-
-  </div>
-
-
-  <div
-    id="likedSongs"
-    class="song-list"
-  ></div>
-
-</section>
-
-
-<!-- =====================================================
-     ALBUMS
-===================================================== -->
-
-<section
-  id="albums"
-  class="page"
->
-
-  <div class="page-title">
-
-    <div class="page-title-icon">
-      <i data-lucide="disc-3"></i>
-    </div>
-
-    <div>
-      <h1>Albums</h1>
-
-      <p>
-        Explore your albums.
-      </p>
-    </div>
-
-  </div>
-
-
-  <div
-    id="albumGrid"
-    class="album-grid"
-  ></div>
-
-</section>
-
-
-<!-- =====================================================
-     ARTISTS
-===================================================== -->
-
-<section
-  id="artists"
-  class="page"
->
-
-  <div class="page-title">
-
-    <div class="page-title-icon">
-      <i data-lucide="mic-2"></i>
-    </div>
-
-    <div>
-      <h1>Artists</h1>
-
-      <p>
-        Explore artists in your library.
-      </p>
-    </div>
-
-  </div>
-
-
-  <div
-    id="artistGrid"
-    class="artist-grid"
-  ></div>
-
-</section>
-
-
-</main>
-
-
-<!-- =====================================================
-     MUSIC PLAYER
-===================================================== -->
-
-<div class="player">
-
-
-  <!-- NOW PLAYING -->
-
-  <div class="now-playing">
-
-    <img
-      id="playerCover"
-      src="/images/default-cover.svg"
-      alt="Song cover"
-    >
-
-    <div class="now-info">
-
-      <strong id="playerTitle">
-        Select a song
-      </strong>
-
-      <span id="playerArtist">
-        स्वरAJ
-      </span>
-
-    </div>
-
-
-    <button
-      id="likeBtn"
-      class="player-like"
-      aria-label="Like"
-    >
-      <i data-lucide="heart"></i>
-    </button>
-
-  </div>
-
-
-  <!-- CONTROLS -->
-
-  <div class="player-center">
-
-    <div class="player-controls">
-
-      <button
-        id="shuffleBtn"
-        aria-label="Shuffle"
-      >
-        <i data-lucide="shuffle"></i>
-      </button>
-
-
-      <button
-        id="prevBtn"
-        aria-label="Previous"
-      >
-        <i data-lucide="skip-back"></i>
-      </button>
-
-
-      <button
-        id="playBtn"
-        class="play-button"
-        aria-label="Play"
-      >
-        <i data-lucide="play"></i>
-      </button>
-
-
-      <button
-        id="nextBtn"
-        aria-label="Next"
-      >
-        <i data-lucide="skip-forward"></i>
-      </button>
-
-
-      <button
-        id="repeatBtn"
-        aria-label="Repeat"
-      >
-        <i data-lucide="repeat"></i>
-      </button>
-
-    </div>
-
-
-    <div class="progress-row">
-
-      <span id="currentTime">
-        0:00
-      </span>
+      <span>🔊</span>
 
       <input
-        id="progress"
+        id="volume"
         type="range"
         min="0"
-        max="100"
-        value="0"
-      >
-
-      <span id="duration">
-        0:00
-      </span>
+        max="1"
+        step="0.01"
+        value="0.8"
+      />
 
     </div>
 
   </div>
 
 
-  <!-- VOLUME -->
+  <!-- Mobile navigation -->
 
-  <div class="player-right">
+  <nav class="mobile-nav">
 
-    <i data-lucide="volume-2"></i>
+    <button class="mobile-nav-item active" data-section="home">
+      <span>⌂</span>
+      Home
+    </button>
 
-    <input
-      id="volume"
-      type="range"
-      min="0"
-      max="1"
-      step="0.01"
-      value="1"
-    >
+    <button class="mobile-nav-item" data-section="search">
+      <span>⌕</span>
+      Search
+    </button>
 
+    <button class="mobile-nav-item" data-section="library">
+      <span>▣</span>
+      Library
+    </button>
+
+    <button class="mobile-nav-item" data-section="liked">
+      <span>♡</span>
+      Liked
+    </button>
+
+  </nav>
+
+
+  <!-- Audio -->
+
+  <audio id="audio"></audio>
+
+  <!-- Toast -->
+
+  <div id="toast" class="toast">
+    <span>✓</span>
+    <p>Ready</p>
   </div>
 
-</div>
-
-
-<!-- =====================================================
-     MOBILE NAV
-===================================================== -->
-
-<nav class="mobile-nav">
-
-  <button
-    class="mobile-nav-item active"
-    data-page="home"
-  >
-    <i data-lucide="home"></i>
-    <small>Home</small>
-  </button>
-
-
-  <button
-    class="mobile-nav-item"
-    data-page="searchPage"
-  >
-    <i data-lucide="search"></i>
-    <small>Search</small>
-  </button>
-
-
-  <button
-    class="mobile-nav-item"
-    data-page="library"
-  >
-    <i data-lucide="library"></i>
-    <small>Library</small>
-  </button>
-
-</nav>
-
-
-<!-- AUDIO -->
-
-<audio
-  id="audio"
-  preload="metadata"
-></audio>
-
-
-<script src="/script.js"></script>
-
-<script>
-  if (window.lucide) {
-    lucide.createIcons();
-  }
-</script>
+  <script src="script.js"></script>
 
 </body>
 </html>
