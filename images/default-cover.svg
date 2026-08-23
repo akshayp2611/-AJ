@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+<defs><radialGradient id="g"><stop stop-color="#ff3d91"/><stop offset=".45" stop-color="#6f3eb7"/><stop offset="1" stop-color="#101019"/></radialGradient></defs>
+<rect width="800" height="800" rx="80" fill="url(#g)"/>
+<circle cx="400" cy="400" r="220" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="3"/>
+<text x="400" y="470" text-anchor="middle" fill="white" font-size="230" font-family="Arial">♫</text>
+</svg>
