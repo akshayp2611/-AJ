@@ -1,123 +1,1206 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#08070d">
-  <title>स्वरAJ — Music</title>
-  <link rel="stylesheet" href="/styles.css">
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#080808"
+    >
+
+    <meta
+        name="description"
+        content="स्वरAJ - Personal Music Player"
+    >
+
+    <title>स्वरAJ Music</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Roboto,
+                Arial,
+                sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at top,
+                    #222 0,
+                    #0c0c0c 35%,
+                    #050505 100%
+                );
+
+            color: #fff;
+            padding-bottom: 100px;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            cursor: pointer;
+        }
+
+        /* =========================================
+           HEADER
+        ========================================= */
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 20px;
+
+            padding: 16px 24px;
+
+            background: rgba(
+                8,
+                8,
+                8,
+                0.92
+            );
+
+            backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            white-space: nowrap;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 50%;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff2d55,
+                    #ff9500
+                );
+
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-sub {
+            color: #999;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+
+        /* =========================================
+           SEARCH
+        ========================================= */
+
+        .search-wrapper {
+            flex: 1;
+            max-width: 620px;
+            position: relative;
+        }
+
+        .search-wrapper input {
+            width: 100%;
+
+            padding: 13px 18px 13px 45px;
+
+            border-radius: 30px;
+
+            border:
+                1px solid rgba(
+                    255,
+                    255,
+                    255,
+                    0.1
+                );
+
+            background: rgba(
+                255,
+                255,
+                255,
+                0.08
+            );
+
+            color: #fff;
+
+            outline: none;
+        }
+
+        .search-wrapper input:focus {
+            border-color:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.25
+                );
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 17px;
+            top: 50%;
+            transform:
+                translateY(-50%);
+
+            color: #aaa;
+        }
+
+        /* =========================================
+           MAIN
+        ========================================= */
+
+        .container {
+            width: min(
+                1200px,
+                calc(100% - 32px)
+            );
+
+            margin: 0 auto;
+        }
+
+        .hero {
+            margin-top: 25px;
+
+            padding: 38px;
+
+            border-radius: 26px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(
+                        255,
+                        45,
+                        85,
+                        0.28
+                    ),
+                    rgba(
+                        255,
+                        149,
+                        0,
+                        0.12
+                    ),
+                    rgba(
+                        255,
+                        255,
+                        255,
+                        0.04
+                    )
+                );
+
+            border:
+                1px solid rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+            overflow: hidden;
+        }
+
+        .hero h1 {
+            font-size:
+                clamp(
+                    32px,
+                    6vw,
+                    64px
+                );
+
+            line-height: 1;
+            margin-bottom: 14px;
+        }
+
+        .hero p {
+            color: #bbb;
+            font-size: 16px;
+            max-width: 600px;
+        }
+
+        .hero-count {
+            margin-top: 22px;
+
+            display: inline-flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            padding: 9px 15px;
+
+            border-radius: 20px;
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+            color: #ddd;
+        }
+
+        /* =========================================
+           SECTION
+        ========================================= */
+
+        .section {
+            margin-top: 35px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 23px;
+            font-weight: 750;
+        }
+
+        /* =========================================
+           CATEGORIES
+        ========================================= */
+
+        #categories {
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(
+                        150px,
+                        1fr
+                    )
+                );
+
+            gap: 12px;
+        }
+
+        .category {
+            text-align: left;
+
+            min-height: 100px;
+
+            padding: 18px;
+
+            border-radius: 18px;
+
+            color: #fff;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(
+                        255,
+                        255,
+                        255,
+                        0.10
+                    ),
+                    rgba(
+                        255,
+                        255,
+                        255,
+                        0.035
+                    )
+                );
+
+            border:
+                1px solid rgba(
+                    255,
+                    255,
+                    255,
+                    0.07
+                );
+
+            transition:
+                transform 0.2s,
+                background 0.2s;
+        }
+
+        .category:hover {
+            transform:
+                translateY(-2px);
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.13
+                );
+        }
+
+        .category strong {
+            display: block;
+            font-size: 17px;
+            margin-bottom: 9px;
+        }
+
+        .category span {
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        /* =========================================
+           SONG LIST
+        ========================================= */
+
+        #songList {
+            display: flex;
+            flex-direction: column;
+
+            gap: 8px;
+        }
+
+        .song {
+            display: flex;
+            align-items: center;
+
+            gap: 15px;
+
+            padding: 10px 13px;
+
+            border-radius: 15px;
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.035
+                );
+
+            border:
+                1px solid transparent;
+
+            transition:
+                background 0.2s,
+                border-color 0.2s;
+        }
+
+        .song:hover {
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+            border-color:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+        }
+
+        .song-cover {
+            width: 58px;
+            height: 58px;
+
+            flex-shrink: 0;
+
+            object-fit: cover;
+
+            border-radius: 10px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #333,
+                    #111
+                );
+        }
+
+        .song-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .song-title {
+            font-weight: 700;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+        }
+
+        .song-artist {
+            margin-top: 4px;
+
+            color: #aaa;
+
+            font-size: 13px;
+        }
+
+        .song-category {
+            margin-top: 3px;
+
+            color: #777;
+
+            font-size: 11px;
+        }
+
+        .play-song {
+            width: 42px;
+            height: 42px;
+
+            border-radius: 50%;
+
+            flex-shrink: 0;
+
+            color: #fff;
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.09
+                );
+
+            transition:
+                transform 0.15s,
+                background 0.15s;
+        }
+
+        .play-song:hover {
+            transform: scale(1.06);
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.17
+                );
+        }
+
+        /* =========================================
+           EMPTY
+        ========================================= */
+
+        .empty {
+            padding: 40px 20px;
+
+            text-align: center;
+
+            color: #aaa;
+
+            border-radius: 18px;
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.035
+                );
+        }
+
+        .empty h3 {
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .empty button {
+            margin-top: 15px;
+
+            padding: 10px 18px;
+
+            border-radius: 20px;
+
+            background: #fff;
+
+            color: #000;
+        }
+
+        /* =========================================
+           PLAYER
+        ========================================= */
+
+        .player {
+            position: fixed;
+
+            left: 0;
+            right: 0;
+            bottom: 0;
+
+            z-index: 200;
+
+            padding:
+                12px
+                max(
+                    14px,
+                    env(
+                        safe-area-inset-right
+                    )
+                )
+                calc(
+                    12px +
+                    env(
+                        safe-area-inset-bottom
+                    )
+                )
+                max(
+                    14px,
+                    env(
+                        safe-area-inset-left
+                    )
+                );
+
+            background:
+                rgba(
+                    12,
+                    12,
+                    12,
+                    0.96
+                );
+
+            backdrop-filter:
+                blur(20px);
+
+            border-top:
+                1px solid rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+        }
+
+        .player-inner {
+            width: min(
+                1200px,
+                100%
+            );
+
+            margin: 0 auto;
+
+            display: flex;
+            align-items: center;
+
+            gap: 14px;
+        }
+
+        .player-cover {
+            width: 48px;
+            height: 48px;
+
+            border-radius: 8px;
+
+            object-fit: cover;
+
+            background: #222;
+
+            flex-shrink: 0;
+        }
+
+        .player-info {
+            width: 180px;
+
+            min-width: 0;
+        }
+
+        .player-title {
+            font-weight: 700;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+        }
+
+        .player-artist {
+            margin-top: 3px;
+
+            color: #999;
+
+            font-size: 12px;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+        }
+
+        .player-controls {
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+        }
+
+        .player-controls button {
+            width: 38px;
+            height: 38px;
+
+            border-radius: 50%;
+
+            background:
+                transparent;
+
+            color: #fff;
+
+            font-size: 17px;
+        }
+
+        .player-controls button:hover {
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+        }
+
+        #playBtn {
+            width: 44px;
+            height: 44px;
+
+            background: #fff;
+
+            color: #000;
+
+            font-size: 18px;
+        }
+
+        #playBtn:hover {
+            background: #ddd;
+        }
+
+        .progress-wrap {
+            flex: 1;
+        }
+
+        #progress {
+            width: 100%;
+
+            height: 4px;
+
+            accent-color: #fff;
+
+            cursor: pointer;
+        }
+
+        /* =========================================
+           FOOTER
+        ========================================= */
+
+        footer {
+            margin-top: 50px;
+
+            padding: 30px 0;
+
+            text-align: center;
+
+            color: #666;
+
+            font-size: 12px;
+        }
+
+        /* =========================================
+           MOBILE
+        ========================================= */
+
+        @media (
+            max-width: 700px
+        ) {
+
+            .header {
+                flex-wrap: wrap;
+
+                padding:
+                    12px 14px;
+            }
+
+            .logo {
+                width: auto;
+            }
+
+            .logo-sub {
+                display: none;
+            }
+
+            .search-wrapper {
+                order: 3;
+
+                width: 100%;
+
+                max-width: none;
+            }
+
+            .container {
+                width:
+                    calc(
+                        100% - 20px
+                    );
+            }
+
+            .hero {
+                margin-top: 15px;
+
+                padding: 27px 20px;
+
+                border-radius: 20px;
+            }
+
+            .hero h1 {
+                font-size: 38px;
+            }
+
+            .section {
+                margin-top: 27px;
+            }
+
+            #categories {
+                grid-template-columns:
+                    repeat(
+                        2,
+                        minmax(
+                            0,
+                            1fr
+                        )
+                    );
+            }
+
+            .category {
+                min-height: 85px;
+                padding: 14px;
+            }
+
+            .song {
+                gap: 11px;
+                padding: 9px;
+            }
+
+            .song-cover {
+                width: 50px;
+                height: 50px;
+            }
+
+            .player-inner {
+                gap: 9px;
+            }
+
+            .player-info {
+                flex: 1;
+                width: auto;
+            }
+
+            .player-controls {
+                gap: 2px;
+            }
+
+            .player-controls button {
+                width: 34px;
+                height: 34px;
+            }
+
+            #playBtn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .progress-wrap {
+                position: absolute;
+
+                left: 14px;
+                right: 14px;
+
+                top: -3px;
+
+                width:
+                    calc(
+                        100% - 28px
+                    );
+            }
+        }
+
+        @media (
+            max-width: 430px
+        ) {
+
+            .logo-text {
+                font-size: 19px;
+            }
+
+            .player-cover {
+                width: 42px;
+                height: 42px;
+            }
+
+            .player-controls button {
+                font-size: 15px;
+            }
+
+            .player-info {
+                max-width: 115px;
+            }
+
+            .player-controls {
+                margin-left: auto;
+            }
+        }
+    </style>
 </head>
+
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu">☰</button>
-      <a class="brand" href="/" aria-label="स्वरAJ home">
-        <span class="brand-dev">स्वर</span><span>AJ</span>
-      </a>
-      <div class="search-wrap">
-        <span class="search-icon">⌕</span>
-        <input id="searchInput" type="search" autocomplete="off" placeholder="Search songs, artists or albums">
-        <button id="clearSearch" class="clear-btn" hidden>×</button>
-      </div>
-      <button class="avatar" id="profileBtn" aria-label="Profile">A</button>
+
+    <!-- =========================================
+         HEADER
+    ========================================== -->
+
+    <header class="header">
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                ♪
+            </div>
+
+            <div>
+                <div class="logo-text">
+                    स्वरAJ
+                </div>
+
+                <div class="logo-sub">
+                    Your Music
+                </div>
+            </div>
+
+        </div>
+
+        <div class="search-wrapper">
+
+            <span class="search-icon">
+                🔍
+            </span>
+
+            <input
+                id="search"
+                type="search"
+                placeholder="Search songs, artists..."
+                autocomplete="off"
+            >
+
+        </div>
+
     </header>
 
-    <aside class="sidebar" id="sidebar">
-      <div class="side-brand"><span>♫</span> स्वरAJ</div>
-      <nav>
-        <button class="nav-item active" data-view="home">⌂ <span>Home</span></button>
-        <button class="nav-item" data-view="all">♫ <span>All Songs</span></button>
-        <button class="nav-item" data-view="favorites">♡ <span>Favorites</span></button>
-      </nav>
-      <div class="side-label">YOUR LIBRARY</div>
-      <div id="sideCategories"></div>
-    </aside>
 
-    <main class="main">
-      <section class="hero-actions">
-        <button class="primary-btn" id="playAllBtn">▶ <span>Play Music</span></button>
-        <button class="secondary-btn" id="exploreBtn">Explore Songs</button>
-      </section>
+    <!-- =========================================
+         MAIN
+    ========================================== -->
 
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">WELCOME TO स्वरAJ</p>
-          <h1>Music for<br><span>Every Mood</span></h1>
-          <p>Discover, play and enjoy your favorite music anytime, anywhere.</p>
-          <button class="gradient-btn" id="heroExplore">Explore Now</button>
-        </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="disc"></div>
-          <div class="music-card">♫</div>
-          <div class="wave">∿∿∿∿</div>
-        </div>
-        <div class="song-count"><strong id="songCount">0</strong><span>Songs<br>Available</span></div>
-      </section>
+    <main class="container">
 
-      <section class="section" id="categoriesSection">
-        <div class="section-head">
-          <div><h2>Categories</h2><p>Browse your music</p></div>
-          <button class="text-btn" id="viewCategories">View all →</button>
-        </div>
-        <div class="category-row" id="categories"></div>
-      </section>
+        <!-- HERO -->
 
-      <section class="section">
-        <div class="section-head">
-          <div><h2 id="songsHeading">Recently Added</h2><p id="songsSubheading">Your latest songs</p></div>
-          <button class="text-btn" id="showAllBtn">View all →</button>
-        </div>
-        <div id="songGrid" class="song-grid">
-          <div class="loading">Loading songs…</div>
-        </div>
-      </section>
+        <section class="hero">
 
-      <section class="section">
-        <div class="section-head">
-          <div><h2>Popular Artists</h2><p>From your collection</p></div>
-        </div>
-        <div class="artist-row">
-          <div class="artist"><div class="artist-img note">♫</div><b>स्वरAJ</b><span>Music</span></div>
-          <div class="artist"><div class="artist-img">♪</div><b>Marathi Hits</b><span>Collection</span></div>
-          <div class="artist"><div class="artist-img">ॐ</div><b>Bhakti</b><span>Collection</span></div>
-          <div class="artist"><div class="artist-img">♥</div><b>Love Songs</b><span>Collection</span></div>
-          <div class="artist"><div class="artist-img">ϟ</div><b>Energetic</b><span>Collection</span></div>
-        </div>
-      </section>
+            <h1>
+                Your Music.
+            </h1>
+
+            <p>
+                Listen to your personal music
+                collection with स्वरAJ.
+            </p>
+
+            <div class="hero-count">
+
+                🎵
+
+                <span id="heroSongCount">
+                    0
+                </span>
+
+                songs available
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================
+             CATEGORIES
+        ====================================== -->
+
+        <section class="section">
+
+            <div class="section-header">
+
+                <h2 class="section-title">
+                    Categories
+                </h2>
+
+                <button
+                    type="button"
+                    onclick="filterCategory('All Songs')"
+                    style="
+                        background:none;
+                        color:#aaa;
+                        padding:5px;
+                    "
+                >
+                    All Songs
+                </button>
+
+            </div>
+
+            <div id="categories">
+
+                <div class="empty">
+                    Loading categories...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================
+             SONGS
+        ====================================== -->
+
+        <section class="section">
+
+            <div class="section-header">
+
+                <h2 class="section-title">
+                    All Songs
+                </h2>
+
+                <div
+                    style="
+                        color:#888;
+                        font-size:13px;
+                    "
+                >
+                    <span id="songCount">
+                        0
+                    </span>
+                    songs
+                </div>
+
+            </div>
+
+            <div id="songList">
+
+                <div class="empty">
+                    Loading songs...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <footer>
+
+            <div>
+                स्वरAJ Music
+            </div>
+
+            <div style="margin-top:5px;">
+                Personal music player
+            </div>
+
+        </footer>
+
     </main>
 
-    <div class="player" id="player">
-      <div class="now-playing">
-        <div class="cover small-cover" id="playerCover">♫</div>
-        <div class="now-text">
-          <strong id="playerTitle">Select a song to play</strong>
-          <span id="playerArtist">स्वरAJ</span>
+
+    <!-- =========================================
+         AUDIO
+    ========================================== -->
+
+    <audio
+        id="audio"
+        preload="metadata"
+    ></audio>
+
+
+    <!-- =========================================
+         FIXED PLAYER
+    ========================================== -->
+
+    <div class="player">
+
+        <div class="player-inner">
+
+            <img
+                id="cover"
+                class="player-cover"
+                src="/images/default-cover.svg"
+                alt="Album cover"
+                onerror="
+                    this.onerror=null;
+                    this.src='/images/default-cover.svg';
+                "
+            >
+
+            <div class="player-info">
+
+                <div
+                    id="nowTitle"
+                    class="player-title"
+                >
+                    Select a song
+                </div>
+
+                <div
+                    id="nowArtist"
+                    class="player-artist"
+                >
+                    स्वरAJ
+                </div>
+
+            </div>
+
+
+            <div class="player-controls">
+
+                <button
+                    id="shuffleBtn"
+                    type="button"
+                    title="Shuffle"
+                    aria-label="Shuffle"
+                >
+                    🔀
+                </button>
+
+                <button
+                    id="prevBtn"
+                    type="button"
+                    title="Previous"
+                    aria-label="Previous"
+                >
+                    ⏮
+                </button>
+
+                <button
+                    id="playBtn"
+                    type="button"
+                    title="Play"
+                    aria-label="Play"
+                >
+                    ▶
+                </button>
+
+                <button
+                    id="nextBtn"
+                    type="button"
+                    title="Next"
+                    aria-label="Next"
+                >
+                    ⏭
+                </button>
+
+                <button
+                    id="repeatBtn"
+                    type="button"
+                    title="Repeat"
+                    aria-label="Repeat"
+                >
+                    🔁
+                </button>
+
+            </div>
+
         </div>
-      </div>
-      <div class="player-center">
-        <div class="controls">
-          <button id="shuffleBtn" title="Shuffle">⤨</button>
-          <button id="prevBtn" title="Previous">|◀</button>
-          <button id="playPauseBtn" class="play-main" title="Play">▶</button>
-          <button id="nextBtn" title="Next">▶|</button>
-          <button id="repeatBtn" title="Repeat">↻</button>
+
+
+        <div class="progress-wrap">
+
+            <input
+                id="progress"
+                type="range"
+                min="0"
+                max="100"
+                value="0"
+                aria-label="Song progress"
+            >
+
         </div>
-        <div class="progress-row">
-          <span id="currentTime">0:00</span>
-          <input id="progress" type="range" min="0" max="100" value="0">
-          <span id="duration">0:00</span>
-        </div>
-      </div>
-      <div class="volume">
-        <span>◖</span>
-        <input id="volume" type="range" min="0" max="1" step="0.01" value="1">
-      </div>
+
     </div>
 
-    <audio id="audio" preload="metadata"></audio>
-    <div id="toast" class="toast"></div>
-  </div>
 
-  <script src="/script.js"></script>
+    <!-- =========================================
+         SCRIPT
+    ========================================== -->
+
+    <script src="/script.js"></script>
+
 </body>
+
 </html>
