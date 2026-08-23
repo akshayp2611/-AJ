@@ -1,341 +1,805 @@
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
+const audio =
+  document.getElementById("audio");
 
-const audio = $("#audio");
 const state = {
   songs: [],
   filtered: [],
-  current: -1,
-  favorites: JSON.parse(localStorage.getItem("swaraj-favorites") || "[]"),
+  index: -1,
   shuffle: false,
-  repeat: false
+  repeat: false,
+
+  liked: JSON.parse(
+    localStorage.getItem(
+      "swaraj-liked"
+    ) || "[]"
+  )
 };
 
-document.addEventListener("DOMContentLoaded", init);
+// --------------------------------------------------
+// Helper
+// --------------------------------------------------
 
-async function init() {
-  bindEvents();
-  await loadSongs();
-  await loadCategories();
+function $(id) {
+  return document.getElementById(id);
 }
 
-async function api(url) {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+function esc(value) {
+  return String(
+    value ?? ""
+  ).replace(
+    /[&<>"']/g,
+    char =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[char]
+  );
 }
+
+// --------------------------------------------------
+// Normalize song
+// --------------------------------------------------
+
+function normalizeSong(
+  song,
+  index
+) {
+  return {
+    id:
+      song.id ||
+      `song-${index + 1}`,
+
+    title:
+      song.title ||
+      "Untitled",
+
+    artist:
+      song.artist ||
+      "स्वरAJ",
+
+    album:
+      song.album ||
+      song.category ||
+      "Music",
+
+    category:
+      song.category ||
+      "Music",
+
+    cover:
+      song.cover ||
+      "/images/default-cover.svg",
+
+    url:
+      song.url ||
+      "",
+
+    file:
+      song.file ||
+      ""
+  };
+}
+
+// --------------------------------------------------
+// LOAD SONGS
+// --------------------------------------------------
 
 async function loadSongs() {
-  const grid = $("#songGrid");
-  grid.innerHTML = '<div class="loading">Loading songs…</div>';
+  const songList =
+    $("songList");
 
   try {
-    const data = await api("/api/songs");
-    const songs = Array.isArray(data) ? data : (data.songs || data.data || []);
-    state.songs = songs.map(normalizeSong);
-    state.filtered = [...state.songs];
-    $("#songCount").textContent = state.songs.length;
-    renderSongs();
-  } catch (err) {
-    console.error(err);
-    grid.innerHTML = `<div class="empty">Unable to load songs.<br><small>Check /api/health and your Render logs.</small></div>`;
-    toast("Song API could not be loaded");
+    songList.innerHTML = `
+      <div class="empty">
+        Loading songs...
+      </div>
+    `;
+
+    console.log(
+      "Loading /api/songs..."
+    );
+
+    const response =
+      await fetch(
+        "/api/songs",
+        {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Accept:
+              "application/json"
+          }
+        }
+      );
+
+    console.log(
+      "Songs API status:",
+      response.status
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status}`
+      );
+    }
+
+    const data =
+      await response.json();
+
+    console.log(
+      "Songs API response:",
+      data
+    );
+
+    // Support both:
+    //
+    // [...]
+    //
+    // and:
+    //
+    // { songs: [...] }
+
+    let songs = [];
+
+    if (
+      Array.isArray(data)
+    ) {
+      songs = data;
+    } else if (
+      data &&
+      Array.isArray(
+        data.songs
+      )
+    ) {
+      songs =
+        data.songs;
+    }
+
+    state.songs =
+      songs.map(
+        normalizeSong
+      );
+
+    state.filtered =
+      [...state.songs];
+
+    if ($("songCount")) {
+      $("songCount").textContent =
+        state.songs.length;
+    }
+
+    console.log(
+      `Loaded ${state.songs.length} songs`
+    );
+
+    renderSongs(
+      state.songs
+    );
+
+    await loadCategories();
+
+  } catch (error) {
+    console.error(
+      "Song API could not be loaded:",
+      error
+    );
+
+    if ($("songCount")) {
+      $("songCount").textContent =
+        "0";
+    }
+
+    songList.innerHTML = `
+      <div class="empty">
+        <strong>
+          Song API could not be loaded
+        </strong>
+
+        <br><br>
+
+        ${esc(
+          error.message
+        )}
+
+        <br><br>
+
+        <button
+          onclick="loadSongs()"
+          class="retry-btn"
+        >
+          Retry
+        </button>
+      </div>
+    `;
   }
 }
 
-function normalizeSong(song) {
-  return {
-    id: String(song.id ?? song.path ?? song.url ?? song.title),
-    title: song.title || song.name || "Untitled Song",
-    artist: song.artist || song.singer || "स्वरAJ",
-    album: song.album || song.category || "Music",
-    category: song.category || song.genre || "All Songs",
-    url: song.url || song.src || song.file || "",
-    cover: song.cover || song.image || song.artwork || "/images/default-cover.svg"
-  };
-}
+// --------------------------------------------------
+// CATEGORIES
+// --------------------------------------------------
 
 async function loadCategories() {
   try {
-    const data = await api("/api/categories");
-    const categories = Array.isArray(data) ? data : (data.categories || data.data || []);
-    renderCategories(categories);
-  } catch (err) {
-    console.warn("Categories unavailable", err);
-    const fallback = [
-      {name:"All Songs",count:state.songs.length,icon:"♫"},
-      {name:"Love",count:countCategory("Love"),icon:"♡"},
-      {name:"Bhakti",count:countCategory("Bhakti"),icon:"ॐ"},
-      {name:"Energetic",count:countCategory("Energetic"),icon:"ϟ"},
-      {name:"Emotional",count:countCategory("Emotional"),icon:"☹"}
-    ];
-    renderCategories(fallback);
+    const response =
+      await fetch(
+        "/api/categories",
+        {
+          cache:
+            "no-store"
+        }
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        `Categories HTTP ${response.status}`
+      );
+    }
+
+    const data =
+      await response.json();
+
+    let categories = [];
+
+    if (
+      Array.isArray(data)
+    ) {
+      categories =
+        data;
+    } else if (
+      data &&
+      Array.isArray(
+        data.categories
+      )
+    ) {
+      categories =
+        data.categories;
+    }
+
+    renderCategories(
+      categories
+    );
+
+  } catch (error) {
+    console.error(
+      "Categories error:",
+      error
+    );
+
+    renderCategories(
+      []
+    );
   }
 }
 
-function countCategory(name) {
-  return state.songs.filter(s => s.category.toLowerCase() === name.toLowerCase()).length;
-}
+// --------------------------------------------------
+// RENDER SONGS
+// --------------------------------------------------
 
-function renderCategories(categories) {
-  const wrap = $("#categories");
-  const side = $("#sideCategories");
-  wrap.innerHTML = "";
-  side.innerHTML = "";
+function renderSongs(
+  songs
+) {
+  state.filtered =
+    [...songs];
 
-  categories.forEach((c, index) => {
-    const name = c.name || c.category || "All Songs";
-    const count = Number(c.count ?? countCategory(name));
-    const icon = c.icon || "♫";
+  if (!songs.length) {
+    $("songList").innerHTML = `
+      <div class="empty">
+        No songs found.
+        <br><br>
+        Add MP3 files inside
+        <strong>songs/</strong>.
+      </div>
+    `;
 
-    const card = document.createElement("button");
-    card.className = "category" + (index === 0 ? " active" : "");
-    card.dataset.category = name;
-    card.innerHTML = `<div class="cat-icon">${escapeHtml(icon)}</div>
-      <h3>${escapeHtml(name)}</h3><span>${count} ${count === 1 ? "song" : "songs"}</span>`;
-    card.onclick = () => selectCategory(name);
-    wrap.appendChild(card);
-
-    if (name !== "All Songs") {
-      const btn = document.createElement("button");
-      btn.className = "nav-item";
-      btn.innerHTML = `♫ <span>${escapeHtml(name)}</span>`;
-      btn.onclick = () => selectCategory(name);
-      side.appendChild(btn);
-    }
-  });
-}
-
-function renderSongs() {
-  const grid = $("#songGrid");
-  grid.innerHTML = "";
-
-  if (!state.filtered.length) {
-    grid.innerHTML = '<div class="empty">No songs found.<br><small>Add MP3 files inside the songs/ folder and redeploy.</small></div>';
     return;
   }
 
-  state.filtered.forEach((song) => {
-    const card = document.createElement("article");
-    card.className = "song-card";
-    const fav = state.favorites.includes(song.id);
+  $("songList").innerHTML =
+    songs
+      .map(
+        (song, index) => `
+          <div class="song">
 
-    card.innerHTML = `
-      <div class="cover song-cover">
-        <span>♫</span>
-        <button class="play-overlay" aria-label="Play">▶</button>
-        <button class="fav-btn ${fav ? "active" : ""}" aria-label="Favorite">${fav ? "♥" : "♡"}</button>
+            <img
+              src="${esc(
+                song.cover
+              )}"
+              alt=""
+              onerror="
+                this.onerror=null;
+                this.src='/images/default-cover.svg';
+              "
+            >
+
+            <div class="song-info">
+
+              <b>
+                ${esc(
+                  song.title
+                )}
+              </b>
+
+              <span>
+                ${esc(
+                  song.artist
+                )}
+                •
+                ${esc(
+                  song.category
+                )}
+              </span>
+
+            </div>
+
+            <button
+              onclick="playSong(${index})"
+            >
+              ▶
+            </button>
+
+          </div>
+        `
+      )
+      .join("");
+}
+
+// --------------------------------------------------
+// RENDER CATEGORIES
+// --------------------------------------------------
+
+function renderCategories(
+  categories
+) {
+  const container =
+    $("categories");
+
+  if (!container) {
+    return;
+  }
+
+  if (!categories.length) {
+    container.innerHTML = `
+      <div class="empty">
+        No categories found.
       </div>
-      <div class="song-info">
-        <strong title="${escapeAttr(song.title)}">${escapeHtml(song.title)}</strong>
-        <span>${escapeHtml(song.artist)} · ${escapeHtml(song.category)}</span>
-      </div>`;
+    `;
 
-    card.querySelector(".play-overlay").onclick = (e) => {
-      e.stopPropagation();
-      playSongById(song.id);
-    };
-    card.querySelector(".fav-btn").onclick = (e) => {
-      e.stopPropagation();
-      toggleFavorite(song.id);
-    };
-    card.onclick = () => playSongById(song.id);
-    grid.appendChild(card);
-  });
+    return;
+  }
+
+  container.innerHTML =
+    categories
+      .map(
+        category => {
+          const name =
+            typeof category ===
+            "string"
+              ? category
+              : category.name;
+
+          const count =
+            typeof category ===
+            "string"
+              ? state.songs.filter(
+                  song =>
+                    song.category ===
+                    name
+                ).length
+              : category.count;
+
+          return `
+            <button
+              class="category"
+              onclick="filterCategory('${esc(
+                name
+              )}')"
+            >
+              <h3>
+                ${esc(
+                  name
+                )}
+              </h3>
+
+              <p>
+                ${count} songs
+              </p>
+            </button>
+          `;
+        }
+      )
+      .join("");
 }
 
-function selectCategory(category) {
-  $$(".category").forEach(c => c.classList.toggle("active", c.dataset.category.toLowerCase() === category.toLowerCase()));
-  state.filtered = category.toLowerCase() === "all songs"
-    ? [...state.songs]
-    : state.songs.filter(s => s.category.toLowerCase() === category.toLowerCase());
+// --------------------------------------------------
+// PLAY SONG
+// --------------------------------------------------
 
-  $("#songsHeading").textContent = category;
-  $("#songsSubheading").textContent = `${state.filtered.length} songs`;
-  renderSongs();
-  window.scrollTo({top: document.querySelector(".section").offsetTop - 20, behavior:"smooth"});
-}
+function playSong(
+  index
+) {
+  const song =
+    state.filtered[index];
 
-function searchSongs(query) {
-  const q = query.trim().toLowerCase();
-  state.filtered = !q ? [...state.songs] : state.songs.filter(s =>
-    `${s.title} ${s.artist} ${s.album} ${s.category}`.toLowerCase().includes(q)
+  if (!song) {
+    return;
+  }
+
+  const realIndex =
+    state.songs.findIndex(
+      item =>
+        item.id ===
+        song.id
+    );
+
+  if (
+    realIndex === -1
+  ) {
+    return;
+  }
+
+  state.index =
+    realIndex;
+
+  console.log(
+    "Playing:",
+    song.title
   );
-  $("#songsHeading").textContent = q ? `Search: ${query}` : "Recently Added";
-  $("#songsSubheading").textContent = `${state.filtered.length} songs`;
-  renderSongs();
-}
 
-function playSongById(id) {
-  const index = state.songs.findIndex(s => s.id === id);
-  if (index < 0) return;
-  state.current = index;
-  loadCurrent(true);
-}
-
-function loadCurrent(autoplay = false) {
-  const song = state.songs[state.current];
-  if (!song) return;
+  console.log(
+    "Audio URL:",
+    song.url
+  );
 
   if (!song.url) {
-    toast("This song has no playable file URL");
+    alert(
+      "Song URL is missing."
+    );
+
     return;
   }
 
-  audio.src = song.url;
+  audio.pause();
+
+  audio.src =
+    song.url;
+
   audio.load();
-  $("#playerTitle").textContent = song.title;
-  $("#playerArtist").textContent = song.artist;
-  $("#playerCover").innerHTML = "♫";
-  $("#playPauseBtn").textContent = "❚❚";
 
-  if (autoplay) audio.play().catch(() => {
-    $("#playPauseBtn").textContent = "▶";
-  });
-}
+  audio.play()
+    .then(() => {
+      if ($("playBtn")) {
+        $("playBtn").textContent =
+          "❚❚";
+      }
+    })
+    .catch(error => {
+      console.error(
+        "Playback error:",
+        error
+      );
 
-function togglePlay() {
-  if (state.current < 0) {
-    if (!state.songs.length) return toast("No songs available");
-    state.current = 0;
-    loadCurrent(true);
-    return;
+      alert(
+        `Unable to play ${song.title}`
+      );
+    });
+
+  if ($("nowTitle")) {
+    $("nowTitle").textContent =
+      song.title;
   }
-  if (audio.paused) audio.play().catch(() => toast("Unable to play this audio"));
-  else audio.pause();
-}
 
-function nextSong() {
-  if (!state.songs.length) return;
-  if (state.shuffle) {
-    state.current = Math.floor(Math.random() * state.songs.length);
-  } else {
-    state.current = (state.current + 1) % state.songs.length;
+  if ($("nowArtist")) {
+    $("nowArtist").textContent =
+      song.artist;
   }
-  loadCurrent(true);
-}
 
-function prevSong() {
-  if (!state.songs.length) return;
-  if (audio.currentTime > 3) {
-    audio.currentTime = 0;
-    return;
+  if ($("cover")) {
+    $("cover").src =
+      song.cover;
   }
-  state.current = (state.current - 1 + state.songs.length) % state.songs.length;
-  loadCurrent(true);
 }
 
-function toggleFavorite(id) {
-  const i = state.favorites.indexOf(id);
-  if (i >= 0) state.favorites.splice(i, 1);
-  else state.favorites.push(id);
-  localStorage.setItem("swaraj-favorites", JSON.stringify(state.favorites));
-  renderSongs();
-}
+// --------------------------------------------------
+// FILTER CATEGORY
+// --------------------------------------------------
 
-function showFavorites() {
-  state.filtered = state.songs.filter(s => state.favorites.includes(s.id));
-  $("#songsHeading").textContent = "Favorites";
-  $("#songsSubheading").textContent = `${state.filtered.length} saved songs`;
-  renderSongs();
-}
+window.filterCategory =
+  function (
+    category
+  ) {
+    if (
+      category ===
+      "All Songs"
+    ) {
+      renderSongs(
+        state.songs
+      );
 
-function bindEvents() {
-  $("#menuBtn").onclick = () => $("#sidebar").classList.toggle("open");
-
-  $("#searchInput").oninput = e => {
-    $("#clearSearch").hidden = !e.target.value;
-    searchSongs(e.target.value);
-  };
-
-  $("#clearSearch").onclick = () => {
-    $("#searchInput").value = "";
-    $("#clearSearch").hidden = true;
-    searchSongs("");
-  };
-
-  $("#playPauseBtn").onclick = togglePlay;
-  $("#nextBtn").onclick = nextSong;
-  $("#prevBtn").onclick = prevSong;
-
-  $("#shuffleBtn").onclick = () => {
-    state.shuffle = !state.shuffle;
-    $("#shuffleBtn").style.color = state.shuffle ? "#ff3d91" : "";
-  };
-
-  $("#repeatBtn").onclick = () => {
-    state.repeat = !state.repeat;
-    $("#repeatBtn").style.color = state.repeat ? "#ff3d91" : "";
-  };
-
-  $("#volume").oninput = e => audio.volume = Number(e.target.value);
-
-  $("#progress").oninput = e => {
-    if (audio.duration) audio.currentTime = (Number(e.target.value) / 100) * audio.duration;
-  };
-
-  audio.addEventListener("timeupdate", () => {
-    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-    $("#progress").value = pct;
-    $("#currentTime").textContent = formatTime(audio.currentTime);
-  });
-
-  audio.addEventListener("loadedmetadata", () => {
-    $("#duration").textContent = formatTime(audio.duration);
-  });
-
-  audio.addEventListener("play", () => $("#playPauseBtn").textContent = "❚❚");
-  audio.addEventListener("pause", () => $("#playPauseBtn").textContent = "▶");
-
-  audio.addEventListener("ended", () => {
-    if (state.repeat) {
-      audio.currentTime = 0;
-      audio.play();
-    } else {
-      nextSong();
+      return;
     }
-  });
 
-  $("#playAllBtn").onclick = () => {
-    if (!state.songs.length) return toast("No songs available");
-    state.current = 0;
-    loadCurrent(true);
+    const songs =
+      state.songs.filter(
+        song =>
+          song.category ===
+          category
+      );
+
+    renderSongs(
+      songs
+    );
   };
 
-  $("#exploreBtn").onclick = $("#heroExplore").onclick = () => {
-    document.querySelector(".section").scrollIntoView({behavior:"smooth"});
-  };
+// --------------------------------------------------
+// SEARCH
+// --------------------------------------------------
 
-  $("#showAllBtn").onclick = $("#viewCategories").onclick = () => selectCategory("All Songs");
+if ($("search")) {
+  $("search").addEventListener(
+    "input",
+    event => {
+      const query =
+        event.target.value
+          .trim()
+          .toLowerCase();
 
-  $$(".nav-item[data-view]").forEach(btn => {
-    btn.onclick = () => {
-      $$(".nav-item").forEach(x => x.classList.remove("active"));
-      btn.classList.add("active");
-      if (btn.dataset.view === "favorites") showFavorites();
-      else selectCategory("All Songs");
-      $("#sidebar").classList.remove("open");
+      if (!query) {
+        renderSongs(
+          state.songs
+        );
+
+        return;
+      }
+
+      const results =
+        state.songs.filter(
+          song =>
+            [
+              song.title,
+              song.artist,
+              song.album,
+              song.category,
+              song.file
+            ].some(value =>
+              String(
+                value
+              )
+                .toLowerCase()
+                .includes(
+                  query
+                )
+            )
+        );
+
+      renderSongs(
+        results
+      );
+    }
+  );
+}
+
+// --------------------------------------------------
+// PLAY / PAUSE
+// --------------------------------------------------
+
+if ($("playBtn")) {
+  $("playBtn").onclick =
+    () => {
+      if (
+        state.index === -1
+      ) {
+        if (
+          state.songs.length
+        ) {
+          state.filtered =
+            [...state.songs];
+
+          playSong(0);
+        }
+
+        return;
+      }
+
+      if (
+        audio.paused
+      ) {
+        audio
+          .play()
+          .catch(
+            console.error
+          );
+      } else {
+        audio.pause();
+      }
     };
-  });
 }
 
-function formatTime(seconds) {
-  if (!Number.isFinite(seconds)) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+// --------------------------------------------------
+// NEXT
+// --------------------------------------------------
+
+if ($("nextBtn")) {
+  $("nextBtn").onclick =
+    () => {
+      if (
+        !state.songs.length
+      ) {
+        return;
+      }
+
+      let nextIndex;
+
+      if (
+        state.shuffle
+      ) {
+        nextIndex =
+          Math.floor(
+            Math.random() *
+              state.songs.length
+          );
+      } else {
+        nextIndex =
+          (
+            state.index +
+            1 +
+            state.songs.length
+          ) %
+          state.songs.length;
+      }
+
+      state.filtered =
+        [...state.songs];
+
+      playSong(
+        nextIndex
+      );
+    };
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
-}
-function escapeAttr(value) { return escapeHtml(value); }
+// --------------------------------------------------
+// PREVIOUS
+// --------------------------------------------------
 
-let toastTimer;
-function toast(message) {
-  const el = $("#toast");
-  el.textContent = message;
-  el.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+if ($("prevBtn")) {
+  $("prevBtn").onclick =
+    () => {
+      if (
+        !state.songs.length
+      ) {
+        return;
+      }
+
+      const previousIndex =
+        (
+          state.index -
+          1 +
+          state.songs.length
+        ) %
+        state.songs.length;
+
+      state.filtered =
+        [...state.songs];
+
+      playSong(
+        previousIndex
+      );
+    };
 }
+
+// --------------------------------------------------
+// AUDIO EVENTS
+// --------------------------------------------------
+
+audio.addEventListener(
+  "play",
+  () => {
+    if ($("playBtn")) {
+      $("playBtn").textContent =
+        "❚❚";
+    }
+  }
+);
+
+audio.addEventListener(
+  "pause",
+  () => {
+    if ($("playBtn")) {
+      $("playBtn").textContent =
+        "▶";
+    }
+  }
+);
+
+audio.addEventListener(
+  "ended",
+  () => {
+    if (
+      state.repeat &&
+      state.index >= 0
+    ) {
+      state.filtered =
+        [...state.songs];
+
+      playSong(
+        state.index
+      );
+
+      return;
+    }
+
+    if ($("nextBtn")) {
+      $("nextBtn").click();
+    }
+  }
+);
+
+// --------------------------------------------------
+// PROGRESS
+// --------------------------------------------------
+
+if ($("progress")) {
+  audio.addEventListener(
+    "timeupdate",
+    () => {
+      if (
+        audio.duration
+      ) {
+        $("progress").value =
+          (
+            audio.currentTime /
+            audio.duration
+          ) *
+          100;
+      }
+    }
+  );
+
+  $("progress").oninput =
+    event => {
+      if (
+        audio.duration
+      ) {
+        audio.currentTime =
+          (
+            Number(
+              event.target.value
+            ) /
+            100
+          ) *
+          audio.duration;
+      }
+    };
+}
+
+// --------------------------------------------------
+// SHUFFLE
+// --------------------------------------------------
+
+if ($("shuffleBtn")) {
+  $("shuffleBtn").onclick =
+    () => {
+      state.shuffle =
+        !state.shuffle;
+    };
+}
+
+// --------------------------------------------------
+// REPEAT
+// --------------------------------------------------
+
+if ($("repeatBtn")) {
+  $("repeatBtn").onclick =
+    () => {
+      state.repeat =
+        !state.repeat;
+    };
+}
+
+// --------------------------------------------------
+// INITIALIZE
+// --------------------------------------------------
+
+loadSongs();
