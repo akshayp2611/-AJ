@@ -7,299 +7,117 @@
   <title>स्वरAJ — Music</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
-
 <body>
   <div class="app-shell">
-
     <header class="topbar">
       <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu">☰</button>
-
       <a class="brand" href="/" aria-label="स्वरAJ home">
         <span class="brand-dev">स्वर</span><span>AJ</span>
       </a>
-
       <div class="search-wrap">
         <span class="search-icon">⌕</span>
-        <input
-          id="searchInput"
-          type="search"
-          autocomplete="off"
-          placeholder="Search songs, artists or albums"
-        >
+        <input id="searchInput" type="search" autocomplete="off" placeholder="Search songs, artists or albums">
         <button id="clearSearch" class="clear-btn" hidden>×</button>
       </div>
-
       <button class="avatar" id="profileBtn" aria-label="Profile">A</button>
     </header>
 
     <aside class="sidebar" id="sidebar">
-
-      <div class="side-brand">
-        <span>♫</span> स्वरAJ
-      </div>
-
+      <div class="side-brand"><span>♫</span> स्वरAJ</div>
       <nav>
-        <button class="nav-item active" data-view="home">
-          ⌂ <span>Home</span>
-        </button>
-
-        <button class="nav-item" data-view="all">
-          ♫ <span>All Songs</span>
-        </button>
-
-        <button class="nav-item" data-view="favorites">
-          ♡ <span>Favorites</span>
-        </button>
+        <button class="nav-item active" data-view="home">⌂ <span>Home</span></button>
+        <button class="nav-item" data-view="all">♫ <span>All Songs</span></button>
+        <button class="nav-item" data-view="favorites">♡ <span>Favorites</span></button>
       </nav>
-
       <div class="side-label">YOUR LIBRARY</div>
-
       <div id="sideCategories"></div>
-
     </aside>
 
     <main class="main">
-
       <section class="hero-actions">
-        <button class="primary-btn" id="playAllBtn">
-          ▶ <span>Play Music</span>
-        </button>
-
-        <button class="secondary-btn" id="exploreBtn">
-          Explore Songs
-        </button>
+        <button class="primary-btn" id="playAllBtn">▶ <span>Play Music</span></button>
+        <button class="secondary-btn" id="exploreBtn">Explore Songs</button>
       </section>
 
       <section class="hero">
-
         <div class="hero-copy">
-
-          <p class="eyebrow">
-            WELCOME TO स्वरAJ
-          </p>
-
-          <h1>
-            Music for<br>
-            <span>Every Mood</span>
-          </h1>
-
-          <p>
-            Discover, play and enjoy your favorite music anytime,
-            anywhere.
-          </p>
-
-          <button class="gradient-btn" id="heroExplore">
-            Explore Now
-          </button>
-
+          <p class="eyebrow">WELCOME TO स्वरAJ</p>
+          <h1>Music for<br><span>Every Mood</span></h1>
+          <p>Discover, play and enjoy your favorite music anytime, anywhere.</p>
+          <button class="gradient-btn" id="heroExplore">Explore Now</button>
         </div>
-
         <div class="hero-art" aria-hidden="true">
           <div class="disc"></div>
           <div class="music-card">♫</div>
           <div class="wave">∿∿∿∿</div>
         </div>
-
-        <div class="song-count">
-          <strong id="songCount">0</strong>
-          <span>
-            Songs<br>
-            Available
-          </span>
-        </div>
-
+        <div class="song-count"><strong id="songCount">0</strong><span>Songs<br>Available</span></div>
       </section>
 
       <section class="section" id="categoriesSection">
-
         <div class="section-head">
-
-          <div>
-            <h2>Categories</h2>
-            <p>Browse your music</p>
-          </div>
-
-          <button class="text-btn" id="viewCategories">
-            View all →
-          </button>
-
+          <div><h2>Categories</h2><p>Browse your music</p></div>
+          <button class="text-btn" id="viewCategories">View all →</button>
         </div>
-
         <div class="category-row" id="categories"></div>
-
       </section>
 
       <section class="section">
-
         <div class="section-head">
-
-          <div>
-            <h2 id="songsHeading">Recently Added</h2>
-            <p id="songsSubheading">Your latest songs</p>
-          </div>
-
-          <button class="text-btn" id="showAllBtn">
-            View all →
-          </button>
-
+          <div><h2 id="songsHeading">Recently Added</h2><p id="songsSubheading">Your latest songs</p></div>
+          <button class="text-btn" id="showAllBtn">View all →</button>
         </div>
-
         <div id="songGrid" class="song-grid">
-          <div class="loading">
-            Loading songs…
-          </div>
+          <div class="loading">Loading songs…</div>
         </div>
-
       </section>
 
       <section class="section">
-
         <div class="section-head">
-
-          <div>
-            <h2>Popular Artists</h2>
-            <p>From your collection</p>
-          </div>
-
+          <div><h2>Popular Artists</h2><p>From your collection</p></div>
         </div>
-
         <div class="artist-row">
-
-          <div class="artist">
-            <div class="artist-img note">♫</div>
-            <b>स्वरAJ</b>
-            <span>Music</span>
-          </div>
-
-          <div class="artist">
-            <div class="artist-img">♪</div>
-            <b>Marathi Hits</b>
-            <span>Collection</span>
-          </div>
-
-          <div class="artist">
-            <div class="artist-img">ॐ</div>
-            <b>Bhakti</b>
-            <span>Collection</span>
-          </div>
-
-          <div class="artist">
-            <div class="artist-img">♥</div>
-            <b>Love Songs</b>
-            <span>Collection</span>
-          </div>
-
-          <div class="artist">
-            <div class="artist-img">ϟ</div>
-            <b>Energetic</b>
-            <span>Collection</span>
-          </div>
-
+          <div class="artist"><div class="artist-img note">♫</div><b>स्वरAJ</b><span>Music</span></div>
+          <div class="artist"><div class="artist-img">♪</div><b>Marathi Hits</b><span>Collection</span></div>
+          <div class="artist"><div class="artist-img">ॐ</div><b>Bhakti</b><span>Collection</span></div>
+          <div class="artist"><div class="artist-img">♥</div><b>Love Songs</b><span>Collection</span></div>
+          <div class="artist"><div class="artist-img">ϟ</div><b>Energetic</b><span>Collection</span></div>
         </div>
-
       </section>
-
     </main>
 
     <div class="player" id="player">
-
       <div class="now-playing">
-
-        <div class="cover small-cover" id="playerCover">
-          ♫
-        </div>
-
+        <div class="cover small-cover" id="playerCover">♫</div>
         <div class="now-text">
-          <strong id="playerTitle">
-            Select a song to play
-          </strong>
-
-          <span id="playerArtist">
-            स्वरAJ
-          </span>
+          <strong id="playerTitle">Select a song to play</strong>
+          <span id="playerArtist">स्वरAJ</span>
         </div>
-
       </div>
-
       <div class="player-center">
-
         <div class="controls">
-
-          <button id="shuffleBtn" title="Shuffle">
-            ⤨
-          </button>
-
-          <button id="prevBtn" title="Previous">
-            |◀
-          </button>
-
-          <button
-            id="playPauseBtn"
-            class="play-main"
-            title="Play"
-          >
-            ▶
-          </button>
-
-          <button id="nextBtn" title="Next">
-            ▶|
-          </button>
-
-          <button id="repeatBtn" title="Repeat">
-            ↻
-          </button>
-
+          <button id="shuffleBtn" title="Shuffle">⤨</button>
+          <button id="prevBtn" title="Previous">|◀</button>
+          <button id="playPauseBtn" class="play-main" title="Play">▶</button>
+          <button id="nextBtn" title="Next">▶|</button>
+          <button id="repeatBtn" title="Repeat">↻</button>
         </div>
-
         <div class="progress-row">
-
-          <span id="currentTime">
-            0:00
-          </span>
-
-          <input
-            id="progress"
-            type="range"
-            min="0"
-            max="100"
-            value="0"
-          >
-
-          <span id="duration">
-            0:00
-          </span>
-
+          <span id="currentTime">0:00</span>
+          <input id="progress" type="range" min="0" max="100" value="0">
+          <span id="duration">0:00</span>
         </div>
-
       </div>
-
       <div class="volume">
-
         <span>◖</span>
-
-        <input
-          id="volume"
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value="1"
-        >
-
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="1">
       </div>
-
     </div>
 
-    <audio
-      id="audio"
-      preload="metadata"
-    ></audio>
-
+    <audio id="audio" preload="metadata"></audio>
     <div id="toast" class="toast"></div>
-
   </div>
 
   <script src="/script.js"></script>
-
 </body>
 </html>
