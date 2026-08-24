@@ -1,80 +1,61 @@
-/* =========================================================
-   स्वरAJ MUSIC PLAYER
-   Frontend logic
-   Existing backend logic is preserved.
-   ========================================================= */
-
 "use strict";
 
+/*
+=========================================================
+स्वरAJ FRONTEND
+=========================================================
 
-/* =========================================================
-   CONFIG
-   ========================================================= */
+IMPORTANT:
+This frontend does NOT hardcode songs.
 
-const API_BASE = "";
+It loads songs from:
 
-const SONG_API = `${API_BASE}/api/songs`;
+    /api/songs
 
-const HEALTH_API = `${API_BASE}/api/health`;
+Your existing server.js should provide:
 
+    GET /api/songs
 
-/* =========================================================
-   STATE
-   ========================================================= */
+Expected response:
+
+{
+    "success": true,
+    "count": 2,
+    "songs": [...]
+}
+
+=========================================================
+*/
+
+const API_URL = "/api/songs";
 
 let songs = [];
-
 let filteredSongs = [];
 
 let currentIndex = -1;
 
-let isPlaying = false;
+let shuffle = false;
+let repeat = false;
 
-let shuffleMode = false;
+const audio = document.getElementById("audio");
 
-let repeatMode = false;
+const songsContainer =
+    document.getElementById("songs");
 
-let currentPage = "home";
-
-let likedSongs =
-    JSON.parse(
-        localStorage.getItem("swaraj-liked") || "[]"
-    );
-
-
-/* =========================================================
-   ELEMENTS
-   ========================================================= */
-
-const audio =
-    document.getElementById("audioPlayer");
-
-const songGrid =
-    document.getElementById("songGrid");
-
-const categoryGrid =
-    document.getElementById("categoryGrid");
-
-const allCategoryGrid =
-    document.getElementById("allCategoryGrid");
-
-const searchResults =
-    document.getElementById("searchResults");
-
-const libraryResults =
-    document.getElementById("libraryResults");
-
-const queueList =
-    document.getElementById("queueList");
-
-const searchInput =
-    document.getElementById("searchInput");
-
-const clearSearch =
-    document.getElementById("clearSearch");
+const categoriesContainer =
+    document.getElementById("categories");
 
 const songCount =
     document.getElementById("songCount");
+
+const songHeading =
+    document.getElementById("songHeading");
+
+const emptyState =
+    document.getElementById("emptyState");
+
+const apiStatus =
+    document.getElementById("apiStatus");
 
 const playerTitle =
     document.getElementById("playerTitle");
@@ -85,26 +66,23 @@ const playerArtist =
 const playerCover =
     document.getElementById("playerCover");
 
-const playButton =
-    document.getElementById("playButton");
+const playBtn =
+    document.getElementById("playBtn");
 
-const previousButton =
-    document.getElementById("previousButton");
+const prevBtn =
+    document.getElementById("prevBtn");
 
-const nextButton =
-    document.getElementById("nextButton");
+const nextBtn =
+    document.getElementById("nextBtn");
 
-const shuffleButton =
-    document.getElementById("shuffleButton");
+const shuffleBtn =
+    document.getElementById("shuffleBtn");
 
-const repeatButton =
-    document.getElementById("repeatButton");
+const repeatBtn =
+    document.getElementById("repeatBtn");
 
-const likeButton =
-    document.getElementById("likeButton");
-
-const progressBar =
-    document.getElementById("progressBar");
+const progress =
+    document.getElementById("progress");
 
 const currentTime =
     document.getElementById("currentTime");
@@ -112,190 +90,122 @@ const currentTime =
 const duration =
     document.getElementById("duration");
 
-const volumeBar =
-    document.getElementById("volumeBar");
+const volume =
+    document.getElementById("volume");
 
-const serverStatus =
-    document.getElementById("serverStatus");
+const muteBtn =
+    document.getElementById("muteBtn");
 
-const toast =
-    document.getElementById("toast");
-
-const toastText =
-    document.getElementById("toastText");
+const searchInput =
+    document.getElementById("searchInput");
 
 
-/* =========================================================
-   DEFAULT CATEGORIES
-   ========================================================= */
+/* ======================================================
+   API URL HELPER
+====================================================== */
 
-const CATEGORY_META = {
+function getApiUrl() {
 
-    Love: {
-        icon: "♡",
-        color: "#ff4fae"
-    },
-
-    Bhakti: {
-        icon: "ॐ",
-        color: "#ff9d4d"
-    },
-
-    Energetic: {
-        icon: "⚡",
-        color: "#5de8ff"
-    },
-
-    Emotional: {
-        icon: "◒",
-        color: "#9d72ff"
-    },
-
-    Sad: {
-        icon: "☾",
-        color: "#638dff"
-    },
-
-    Romantic: {
-        icon: "♥",
-        color: "#ff6b8e"
-    },
-
-    Devotional: {
-        icon: "ॐ",
-        color: "#ffb04d"
-    },
-
-    Other: {
-        icon: "♫",
-        color: "#9b5cff"
-    }
-
-};
-
-
-/* =========================================================
-   INITIALIZE
-   ========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    init
-);
-
-
-async function init() {
-
-    setupNavigation();
-
-    setupPlayerControls();
-
-    setupSearch();
-
-    setupInterfaceSwitcher();
-
-    setupMobileMenu();
-
-    setupHero();
-
-    setupExtraButtons();
-
-    audio.volume = 0.8;
-
-    await checkServer();
-
-    await loadSongs();
-
-    renderCategories();
-
-    renderSongs(songs);
-
-    renderLibrary();
-
+    return API_URL;
 }
 
 
-/* =========================================================
-   SERVER HEALTH
-   ========================================================= */
+/* ======================================================
+   SAFE TEXT
+====================================================== */
 
-async function checkServer() {
+function safeText(value, fallback = "") {
 
-    try {
-
-        const response =
-            await fetch(
-                HEALTH_API,
-                {
-                    cache: "no-store"
-                }
-            );
-
-        if (!response.ok) {
-            throw new Error("Health request failed");
-        }
-
-        const data =
-            await response.json();
-
-        if (
-            data &&
-            (
-                data.status === "ok" ||
-                data.success === true
-            )
-        ) {
-
-            serverStatus.textContent =
-                "Online";
-
-        } else {
-
-            serverStatus.textContent =
-                "Connected";
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Health check failed:",
-            error
-        );
-
-        /*
-         * Do not block the music application
-         * if /api/health is unavailable.
-         */
-
-        serverStatus.textContent =
-            "Music API";
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+        return fallback;
     }
+
+    return String(value);
 }
 
 
-/* =========================================================
+/* ======================================================
+   SONG URL
+====================================================== */
+
+function resolveUrl(url) {
+
+    if (!url) {
+        return "";
+    }
+
+    /*
+     * If server already returns an absolute URL,
+     * keep it unchanged.
+     */
+
+    if (
+        url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("blob:")
+    ) {
+        return url;
+    }
+
+    /*
+     * Keep root-relative URLs.
+     */
+
+    if (url.startsWith("/")) {
+        return url;
+    }
+
+    return "/" + url;
+}
+
+
+/* ======================================================
+   COVER
+====================================================== */
+
+function resolveCover(song) {
+
+    const cover =
+        song.cover ||
+        song.image ||
+        song.thumbnail ||
+        "";
+
+    if (!cover) {
+        return "";
+    }
+
+    return resolveUrl(cover);
+}
+
+
+/* ======================================================
    LOAD SONGS
-   ========================================================= */
+====================================================== */
 
 async function loadSongs() {
 
-    showLoading();
+    setStatus("Loading songs...");
 
     try {
 
         const response =
-            await fetch(
-                SONG_API,
-                {
-                    cache: "no-store"
+            await fetch(getApiUrl(), {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                    "Accept": "application/json"
                 }
-            );
+            });
 
         if (!response.ok) {
-
             throw new Error(
-                `Songs API HTTP ${response.status}`
+                "Song API returned HTTP " +
+                response.status
             );
         }
 
@@ -303,51 +213,54 @@ async function loadSongs() {
             await response.json();
 
         /*
-         * Supports:
+         * IMPORTANT:
+         * Support both:
          *
-         * { songs: [...] }
+         * { songs: [] }
          *
-         * OR
+         * and
          *
-         * [...]
+         * []
          */
 
-        let rawSongs = [];
+        let receivedSongs = [];
 
         if (Array.isArray(data)) {
 
-            rawSongs = data;
+            receivedSongs = data;
 
         } else if (
             data &&
             Array.isArray(data.songs)
         ) {
 
-            rawSongs = data.songs;
+            receivedSongs = data.songs;
 
+        } else if (
+            data &&
+            Array.isArray(data.data)
+        ) {
+
+            receivedSongs = data.data;
         }
 
         songs =
-            rawSongs
-                .map(normalizeSong)
-                .filter(song => song.url);
-
-        filteredSongs =
-            [...songs];
-
-        updateSongCount();
-
-        if (songs.length === 0) {
-
-            renderEmpty(
-                "No songs found in your music library."
+            receivedSongs.map(
+                normalizeSong
             );
 
-            showToast(
-                "No songs found"
-            );
+        filteredSongs = [...songs];
 
-        }
+        setStatus(
+            songs.length +
+            " song" +
+            (songs.length === 1 ? "" : "s") +
+            " available"
+        );
+
+        renderCategories();
+
+        renderSongs();
 
     } catch (error) {
 
@@ -357,540 +270,250 @@ async function loadSongs() {
         );
 
         songs = [];
-
         filteredSongs = [];
 
-        updateSongCount();
-
-        renderEmpty(
-            "Song API could not be loaded. Please check the server."
-        );
-
-        showToast(
+        setStatus(
             "Song API could not be loaded"
         );
+
+        renderCategories();
+        renderSongsError();
     }
 }
 
 
-/* =========================================================
+/* ======================================================
    NORMALIZE SONG
-   ========================================================= */
+====================================================== */
 
 function normalizeSong(song, index) {
 
-    if (!song || typeof song !== "object") {
-
-        return {
-            id: `song-${index + 1}`,
-            title: "Unknown Song",
-            artist: "स्वरAJ",
-            album: "Music",
-            category: "Other",
-            cover: "",
-            url: ""
-        };
-
-    }
-
-    let url =
-        song.url ||
-        song.src ||
-        song.path ||
-        song.file ||
-        "";
-
-    /*
-     * Convert file path to URL if required.
-     */
-
-    if (
-        url &&
-        !url.startsWith("/") &&
-        !url.startsWith("http://") &&
-        !url.startsWith("https://")
-    ) {
-
-        url =
-            "/" +
-            url
-                .split("\\")
-                .map(encodeURIComponent)
-                .join("/");
-
-    }
-
-    /*
-     * If backend returns:
-     *
-     * Bhakti/song.mp3
-     *
-     * convert it into:
-     *
-     * /songs/Bhakti/song.mp3
-     */
-
-    if (
-        url &&
-        !url.startsWith("/") &&
-        !url.startsWith("http")
-    ) {
-
-        url =
-            "/songs/" +
-            url
-                .split("/")
-                .map(encodeURIComponent)
-                .join("/");
-    }
+    const category =
+        safeText(
+            song.category ||
+            song.genre ||
+            song.album ||
+            "Other",
+            "Other"
+        );
 
     return {
 
         id:
-            song.id ||
-            `song-${index + 1}`,
+            safeText(
+                song.id,
+                "song-" + (index + 1)
+            ),
 
         title:
-            song.title ||
-            song.name ||
-            "Unknown Song",
+            safeText(
+                song.title ||
+                song.name,
+                "Unknown Song"
+            ),
 
         artist:
-            song.artist ||
-            "स्वरAJ",
+            safeText(
+                song.artist ||
+                song.singer,
+                "स्वरAJ"
+            ),
 
         album:
-            song.album ||
-            "स्वरAJ Music",
+            safeText(
+                song.album,
+                category
+            ),
 
-        category:
-            song.category ||
-            song.genre ||
-            "Other",
+        category,
 
         cover:
-            song.cover ||
-            song.image ||
-            song.artwork ||
-            "",
+            resolveCover(song),
 
-        url: normalizeUrl(url),
+        url:
+            resolveUrl(
+                song.url ||
+                song.src ||
+                song.path ||
+                ""
+            ),
 
         file:
-            song.file ||
-            ""
+            safeText(song.file)
 
     };
 }
 
 
-/* =========================================================
-   URL NORMALIZER
-   ========================================================= */
+/* ======================================================
+   STATUS
+====================================================== */
 
-function normalizeUrl(url) {
+function setStatus(message) {
 
-    if (!url) {
-        return "";
+    if (apiStatus) {
+        apiStatus.textContent = message;
+    }
+}
+
+
+/* ======================================================
+   CATEGORIES
+====================================================== */
+
+function renderCategories() {
+
+    if (!categoriesContainer) {
+        return;
     }
 
-    if (
-        url.startsWith("http://") ||
-        url.startsWith("https://")
-    ) {
+    if (!songs.length) {
 
-        return url;
-    }
+        categoriesContainer.innerHTML = `
+            <div class="loading-card">
+                No categories available
+            </div>
+        `;
 
-    if (!url.startsWith("/")) {
-
-        url = "/" + url;
+        return;
     }
 
     /*
-     * Preserve already encoded URLs.
+     * Build categories from the actual songs.
+     *
+     * This avoids depending on a separate
+     * /api/categories endpoint.
      */
 
-    return url
-        .split("/")
-        .map(
-            (part, index) =>
-                index === 0
-                    ? part
-                    : encodePathPart(part)
-        )
-        .join("/");
-}
+    const map = new Map();
 
+    songs.forEach(song => {
 
-function encodePathPart(part) {
+        const category =
+            safeText(
+                song.category,
+                "Other"
+            );
 
-    try {
+        if (!map.has(category)) {
+            map.set(category, 0);
+        }
 
-        return decodeURIComponent(part)
-            .split("/")
-            .map(encodeURIComponent)
-            .join("/");
+        map.set(
+            category,
+            map.get(category) + 1
+        );
 
-    } catch {
+    });
 
-        return encodeURIComponent(part);
-    }
-}
+    const categoryIcons = [
+        "♫",
+        "◉",
+        "✦",
+        "♬",
+        "♪",
+        "✧",
+        "◈",
+        "★"
+    ];
 
+    const categories =
+        Array.from(map.entries());
 
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
+    categoriesContainer.innerHTML =
+        categories.map(
+            ([name, count], index) => {
 
-function setupNavigation() {
+                const icon =
+                    categoryIcons[
+                        index %
+                        categoryIcons.length
+                    ];
+
+                return `
+                    <article
+                        class="category-card"
+                        data-category="${escapeHtml(name)}"
+                    >
+
+                        <div class="category-icon">
+                            ${icon}
+                        </div>
+
+                        <h3>
+                            ${escapeHtml(name)}
+                        </h3>
+
+                        <p>
+                            ${count}
+                            song${count === 1 ? "" : "s"}
+                        </p>
+
+                    </article>
+                `;
+
+            }
+        ).join("");
 
     document
-        .querySelectorAll(
-            "[data-page]"
-        )
-        .forEach(button => {
+        .querySelectorAll(".category-card")
+        .forEach(card => {
 
-            button.addEventListener(
+            card.addEventListener(
                 "click",
                 () => {
 
-                    navigateTo(
-                        button.dataset.page
-                    );
+                    const category =
+                        card.dataset.category;
 
+                    filterCategory(category);
                 }
             );
 
         });
 
-    document
-        .getElementById("likedNav")
-        ?.addEventListener(
-            "click",
-            () => {
-
-                navigateTo("library");
-
-                renderLibrary();
-
-            }
-        );
-
-    document
-        .getElementById("queueNav")
-        ?.addEventListener(
-            "click",
-            () => {
-
-                navigateTo("queue");
-
-                renderQueue();
-
-            }
-        );
 }
 
 
-function navigateTo(page) {
+/* ======================================================
+   SONGS
+====================================================== */
 
-    currentPage = page;
+function renderSongs() {
 
-    document
-        .querySelectorAll(".page")
-        .forEach(section => {
-
-            section.classList.remove(
-                "active"
-            );
-
-        });
-
-    const pageElement =
-        document.getElementById(
-            `${page}Page`
-        );
-
-    if (pageElement) {
-
-        pageElement.classList.add(
-            "active"
-        );
-
+    if (!songsContainer) {
+        return;
     }
 
-    document
-        .querySelectorAll(
-            ".nav-item, .mobile-nav-item"
-        )
-        .forEach(button => {
+    if (!filteredSongs.length) {
 
-            button.classList.toggle(
-                "active",
-                button.dataset.page === page
-            );
+        songsContainer.innerHTML = "";
 
-        });
+        emptyState.classList.remove("hidden");
 
-    if (page === "library") {
-
-        renderLibrary();
-
-    }
-
-    if (page === "queue") {
-
-        renderQueue();
-
-    }
-
-    if (page === "categories") {
-
-        renderCategories();
-
-    }
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-}
-
-
-/* =========================================================
-   SEARCH
-   ========================================================= */
-
-function setupSearch() {
-
-    searchInput
-        ?.addEventListener(
-            "input",
-            handleSearch
-        );
-
-    clearSearch
-        ?.addEventListener(
-            "click",
-            () => {
-
-                searchInput.value = "";
-
-                clearSearch.classList.add(
-                    "hidden"
-                );
-
-                filteredSongs =
-                    [...songs];
-
-                if (
-                    currentPage === "search"
-                ) {
-
-                    renderSearchResults(
-                        songs
-                    );
-                }
-
-            }
-        );
-
-}
-
-
-function handleSearch() {
-
-    const query =
-        searchInput.value
-            .trim()
-            .toLowerCase();
-
-    clearSearch.classList.toggle(
-        "hidden",
-        !query
-    );
-
-    const results =
-        songs.filter(song => {
-
-            return (
-
-                song.title
-                    .toLowerCase()
-                    .includes(query)
-
-                ||
-
-                song.artist
-                    .toLowerCase()
-                    .includes(query)
-
-                ||
-
-                song.album
-                    .toLowerCase()
-                    .includes(query)
-
-                ||
-
-                song.category
-                    .toLowerCase()
-                    .includes(query)
-
-            );
-
-        });
-
-    filteredSongs = results;
-
-    navigateTo("search");
-
-    renderSearchResults(
-        results
-    );
-}
-
-
-/* =========================================================
-   RENDER SONGS
-   ========================================================= */
-
-function renderSongs(list) {
-
-    if (!songGrid) return;
-
-    if (!list.length) {
-
-        renderEmpty(
-            "No songs available.",
-            songGrid
-        );
+        songCount.textContent =
+            "0 songs";
 
         return;
     }
 
-    songGrid.innerHTML =
-        list
+    emptyState.classList.add("hidden");
+
+    songCount.textContent =
+        filteredSongs.length +
+        " song" +
+        (filteredSongs.length === 1 ? "" : "s");
+
+    songsContainer.innerHTML =
+        filteredSongs
             .map(
                 (song, index) =>
-                    createSongCard(
-                        song,
-                        index
-                    )
+                    createSongCard(song, index)
             )
             .join("");
 
-    attachSongEvents(
-        songGrid
-    );
-}
-
-
-function renderSearchResults(list) {
-
-    if (!searchResults) return;
-
-    if (!list.length) {
-
-        renderEmpty(
-            "No songs matched your search.",
-            searchResults
-        );
-
-        return;
-    }
-
-    searchResults.innerHTML =
-        list
-            .map(
-                (song, index) =>
-                    createSongCard(
-                        song,
-                        index
-                    )
-            )
-            .join("");
-
-    attachSongEvents(
-        searchResults
-    );
-}
-
-
-/* =========================================================
-   SONG CARD
-   ========================================================= */
-
-function createSongCard(song) {
-
-    const safeTitle =
-        escapeHtml(song.title);
-
-    const safeArtist =
-        escapeHtml(song.artist);
-
-    const safeCategory =
-        escapeHtml(song.category);
-
-    const cover =
-        song.cover
-            ? `
-                <img
-                    src="${escapeAttribute(song.cover)}"
-                    alt="${safeTitle}"
-                    loading="lazy"
-                    onerror="this.style.display='none'"
-                >
-              `
-            : `
-                <span class="cover-note">
-                    ♪
-                </span>
-              `;
-
-    return `
-        <article
-            class="song-card"
-            data-song-id="${escapeAttribute(song.id)}"
-        >
-
-            <div class="song-cover">
-
-                ${cover}
-
-                <button
-                    class="song-play"
-                    data-play-song="${escapeAttribute(song.id)}"
-                    title="Play ${safeTitle}"
-                >
-                    ▶
-                </button>
-
-            </div>
-
-            <h3>
-                ${safeTitle}
-            </h3>
-
-            <p>
-                ${safeArtist} • ${safeCategory}
-            </p>
-
-        </article>
-    `;
-}
-
-
-/* =========================================================
-   SONG EVENTS
-   ========================================================= */
-
-function attachSongEvents(container) {
-
-    container
-        .querySelectorAll(
-            "[data-play-song]"
-        )
+    document
+        .querySelectorAll(".song-play")
         .forEach(button => {
 
             button.addEventListener(
@@ -899,110 +522,38 @@ function attachSongEvents(container) {
 
                     event.stopPropagation();
 
-                    const id =
-                        button.dataset.playSong;
+                    const index =
+                        Number(
+                            button.dataset.index
+                        );
 
-                    playSongById(id);
-
-                }
-            );
-
-        });
-
-    container
-        .querySelectorAll(
-            ".song-card"
-        )
-        .forEach(card => {
-
-            card.addEventListener(
-                "dblclick",
-                () => {
-
-                    playSongById(
-                        card.dataset.songId
+                    playSongFromFiltered(
+                        index
                     );
 
                 }
             );
 
         });
-}
 
+    document
+        .querySelectorAll(".song-card")
+        .forEach(card => {
 
-/* =========================================================
-   PLAY SONG
-   ========================================================= */
+            card.addEventListener(
+                "click",
+                () => {
 
-function playSongById(id) {
+                    const index =
+                        Number(
+                            card.dataset.index
+                        );
 
-    const index =
-        songs.findIndex(
-            song =>
-                String(song.id) ===
-                String(id)
-        );
+                    playSongFromFiltered(
+                        index
+                    );
 
-    if (index === -1) {
-
-        showToast(
-            "Song not found"
-        );
-
-        return;
-    }
-
-    currentIndex = index;
-
-    const song =
-        songs[currentIndex];
-
-    if (!song.url) {
-
-        showToast(
-            "Song URL is missing"
-        );
-
-        return;
-    }
-
-    /*
-     * IMPORTANT:
-     *
-     * Backend already returns:
-     *
-     * /songs/Bhakti/file.mp3
-     *
-     * We use it directly.
-     */
-
-    audio.src = song.url;
-
-    audio.load();
-
-    updatePlayer(song);
-
-    audio.play()
-        .then(() => {
-
-            isPlaying = true;
-
-            updatePlayButton();
-
-        })
-        .catch(error => {
-
-            console.error(
-                "Playback failed:",
-                error
-            );
-
-            isPlaying = false;
-
-            updatePlayButton();
-
-            showToast(
-                "Tap Play to start the song"
+                }
             );
 
         });
@@ -1010,413 +561,876 @@ function playSongById(id) {
 }
 
 
-/* =========================================================
-   PLAYER
-   ========================================================= */
+/* ======================================================
+   SONG CARD
+====================================================== */
 
-function updatePlayer(song) {
+function createSongCard(song, index) {
+
+    const cover = song.cover
+        ? `
+            <img
+                src="${escapeHtml(song.cover)}"
+                alt="${escapeHtml(song.title)}"
+                loading="lazy"
+                onerror="this.style.display='none'"
+            >
+          `
+        : "";
+
+    return `
+        <article
+            class="song-card"
+            data-index="${index}"
+        >
+
+            <div class="cover">
+
+                ${cover}
+
+                <span>♫</span>
+
+            </div>
+
+            <div class="song-info">
+
+                <h3>
+                    ${escapeHtml(song.title)}
+                </h3>
+
+                <p>
+                    ${escapeHtml(song.artist)}
+                </p>
+
+            </div>
+
+            <button
+                class="song-play"
+                data-index="${index}"
+                aria-label="Play ${escapeHtml(song.title)}"
+            >
+                ▶
+            </button>
+
+        </article>
+    `;
+}
+
+
+/* ======================================================
+   API ERROR
+====================================================== */
+
+function renderSongsError() {
+
+    songsContainer.innerHTML = `
+        <div class="loading-card">
+            Song API could not be loaded.
+            <br><br>
+            Please check the server deployment.
+        </div>
+    `;
+
+    songCount.textContent = "0 songs";
+
+}
+
+
+/* ======================================================
+   FILTER CATEGORY
+====================================================== */
+
+function filterCategory(category) {
+
+    filteredSongs =
+        songs.filter(
+            song =>
+                song.category
+                    .toLowerCase() ===
+                category.toLowerCase()
+        );
+
+    songHeading.textContent =
+        category;
+
+    renderSongs();
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+
+/* ======================================================
+   ALL SONGS
+====================================================== */
+
+function showAllSongs() {
+
+    filteredSongs = [...songs];
+
+    songHeading.textContent =
+        "All Songs";
+
+    renderSongs();
+}
+
+
+/* ======================================================
+   PLAY SONG
+====================================================== */
+
+function playSongFromFiltered(index) {
+
+    const song =
+        filteredSongs[index];
+
+    if (!song) {
+        return;
+    }
+
+    /*
+     * Find actual position in main songs array.
+     */
+
+    currentIndex =
+        songs.findIndex(
+            item =>
+                item.id === song.id
+        );
+
+    playSong(song);
+}
+
+
+/* ======================================================
+   PLAY
+====================================================== */
+
+async function playSong(song) {
+
+    if (!song.url) {
+
+        console.error(
+            "Song URL missing:",
+            song
+        );
+
+        setStatus(
+            "Song file URL unavailable"
+        );
+
+        return;
+    }
 
     playerTitle.textContent =
         song.title;
 
     playerArtist.textContent =
-        song.artist ||
-        "स्वरAJ";
+        song.artist;
 
     if (song.cover) {
 
-        playerCover.innerHTML =
-            `
-                <img
-                    src="${escapeAttribute(song.cover)}"
-                    alt=""
-                    onerror="
-                        this.style.display='none'
-                    "
-                >
-            `;
+        playerCover.innerHTML = `
+            <img
+                src="${escapeHtml(song.cover)}"
+                alt=""
+            >
+        `;
 
     } else {
 
-        playerCover.innerHTML =
-            `<span>♪</span>`;
-    }
+        playerCover.innerHTML = "♫";
 
-    updateLikeButton();
-
-}
-
-
-function updatePlayButton() {
-
-    playButton.textContent =
-        isPlaying
-            ? "Ⅱ"
-            : "▶";
-
-    playButton.title =
-        isPlaying
-            ? "Pause"
-            : "Play";
-}
-
-
-/* =========================================================
-   PLAYER CONTROLS
-   ========================================================= */
-
-function setupPlayerControls() {
-
-    playButton.addEventListener(
-        "click",
-        togglePlay
-    );
-
-    previousButton.addEventListener(
-        "click",
-        playPrevious
-    );
-
-    nextButton.addEventListener(
-        "click",
-        playNext
-    );
-
-    shuffleButton.addEventListener(
-        "click",
-        () => {
-
-            shuffleMode =
-                !shuffleMode;
-
-            shuffleButton.classList.toggle(
-                "active",
-                shuffleMode
-            );
-
-            showToast(
-                shuffleMode
-                    ? "Shuffle enabled"
-                    : "Shuffle disabled"
-            );
-        }
-    );
-
-    repeatButton.addEventListener(
-        "click",
-        () => {
-
-            repeatMode =
-                !repeatMode;
-
-            repeatButton.classList.toggle(
-                "active",
-                repeatMode
-            );
-
-            showToast(
-                repeatMode
-                    ? "Repeat enabled"
-                    : "Repeat disabled"
-            );
-        }
-    );
-
-
-    audio.addEventListener(
-        "play",
-        () => {
-
-            isPlaying = true;
-
-            updatePlayButton();
-
-        }
-    );
-
-
-    audio.addEventListener(
-        "pause",
-        () => {
-
-            isPlaying = false;
-
-            updatePlayButton();
-
-        }
-    );
-
-
-    audio.addEventListener(
-        "timeupdate",
-        updateProgress
-    );
-
-
-    audio.addEventListener(
-        "loadedmetadata",
-        () => {
-
-            duration.textContent =
-                formatTime(
-                    audio.duration
-                );
-
-        }
-    );
-
-
-    audio.addEventListener(
-        "ended",
-        handleSongEnded
-    );
-
-
-    progressBar.addEventListener(
-        "input",
-        () => {
-
-            if (
-                !Number.isFinite(
-                    audio.duration
-                )
-            ) return;
-
-            audio.currentTime =
-                (
-                    Number(progressBar.value) /
-                    100
-                ) *
-                audio.duration;
-
-        }
-    );
-
-
-    volumeBar.addEventListener(
-        "input",
-        () => {
-
-            audio.volume =
-                Number(
-                    volumeBar.value
-                );
-
-        }
-    );
-
-}
-
-
-function togglePlay() {
-
-    if (currentIndex === -1) {
-
-        if (songs.length) {
-
-            playSongById(
-                songs[0].id
-            );
-
-        } else {
-
-            showToast(
-                "No songs available"
-            );
-
-        }
-
-        return;
-    }
-
-    if (audio.paused) {
-
-        audio.play()
-            .catch(error => {
-
-                console.error(error);
-
-                showToast(
-                    "Unable to play this song"
-                );
-
-            });
-
-    } else {
-
-        audio.pause();
-
-    }
-
-}
-
-
-/* =========================================================
-   NEXT
-   ========================================================= */
-
-function playNext() {
-
-    if (!songs.length) {
-
-        showToast(
-            "No songs available"
-        );
-
-        return;
-    }
-
-    let nextIndex;
-
-    if (shuffleMode) {
-
-        nextIndex =
-            Math.floor(
-                Math.random() *
-                songs.length
-            );
-
-        if (
-            songs.length > 1 &&
-            nextIndex === currentIndex
-        ) {
-
-            nextIndex =
-                (nextIndex + 1) %
-                songs.length;
-
-        }
-
-    } else {
-
-        nextIndex =
-            currentIndex < 0
-                ? 0
-                : (
-                    currentIndex + 1
-                ) %
-                songs.length;
-
-    }
-
-    currentIndex =
-        nextIndex;
-
-    playSongById(
-        songs[currentIndex].id
-    );
-}
-
-
-/* =========================================================
-   PREVIOUS
-   ========================================================= */
-
-function playPrevious() {
-
-    if (!songs.length) {
-
-        showToast(
-            "No songs available"
-        );
-
-        return;
     }
 
     /*
-     * If more than 3 seconds played,
-     * restart current song.
+     * Only change audio source when needed.
      */
 
-    if (
-        audio.currentTime > 3
+    if (audio.src !==
+        new URL(
+            song.url,
+            window.location.href
+        ).href
     ) {
 
-        audio.currentTime = 0;
-
-        return;
-    }
-
-    let previousIndex =
-        currentIndex - 1;
-
-    if (
-        previousIndex < 0
-    ) {
-
-        previousIndex =
-            songs.length - 1;
+        audio.src = song.url;
 
     }
 
-    currentIndex =
-        previousIndex;
+    try {
 
-    playSongById(
-        songs[currentIndex].id
-    );
-}
+        await audio.play();
 
+        updatePlayButton(true);
 
-/* =========================================================
-   ENDED
-   ========================================================= */
+    } catch (error) {
 
-function handleSongEnded() {
-
-    if (repeatMode) {
-
-        audio.currentTime = 0;
-
-        audio.play();
-
-        return;
-    }
-
-    playNext();
-}
-
-
-/* =========================================================
-   PROGRESS
-   ========================================================= */
-
-function updateProgress() {
-
-    if (
-        !Number.isFinite(
-            audio.duration
-        )
-    ) {
-
-        progressBar.value = 0;
-
-        return;
-    }
-
-    const percentage =
-        (
-            audio.currentTime /
-            audio.duration
-        ) *
-        100;
-
-    progressBar.value =
-        percentage || 0;
-
-    currentTime.textContent =
-        formatTime(
-            audio.currentTime
+        console.error(
+            "Playback error:",
+            error
         );
+
+        setStatus(
+            "Tap Play to start the song"
+        );
+
+        updatePlayButton(false);
+    }
+
 }
 
+
+/* ======================================================
+   PLAY / PAUSE
+====================================================== */
+
+playBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (!audio.src) {
+
+            if (songs.length) {
+                currentIndex = 0;
+                await playSong(
+                    songs[0]
+                );
+            }
+
+            return;
+        }
+
+        if (audio.paused) {
+
+            try {
+                await audio.play();
+                updatePlayButton(true);
+            } catch (error) {
+                console.error(error);
+            }
+
+        } else {
+
+            audio.pause();
+
+            updatePlayButton(false);
+        }
+
+    }
+);
+
+
+/* ======================================================
+   UPDATE PLAY BUTTON
+====================================================== */
+
+function updatePlayButton(isPlaying) {
+
+    playBtn.textContent =
+        isPlaying ? "❚❚" : "▶";
+
+}
+
+
+/* ======================================================
+   NEXT
+====================================================== */
+
+nextBtn.addEventListener(
+    "click",
+    () => {
+
+        if (!songs.length) {
+            return;
+        }
+
+        let nextIndex;
+
+        if (shuffle) {
+
+            nextIndex =
+                Math.floor(
+                    Math.random() *
+                    songs.length
+                );
+
+        } else {
+
+            nextIndex =
+                currentIndex + 1;
+
+            if (
+                nextIndex >=
+                songs.length
+            ) {
+                nextIndex = 0;
+            }
+
+        }
+
+        currentIndex = nextIndex;
+
+        playSong(
+            songs[currentIndex]
+        );
+
+    }
+);
+
+
+/* ======================================================
+   PREVIOUS
+====================================================== */
+
+prevBtn.addEventListener(
+    "click",
+    () => {
+
+        if (!songs.length) {
+            return;
+        }
+
+        /*
+         * If song already played for more
+         * than 3 seconds, restart it.
+         */
+
+        if (audio.currentTime > 3) {
+
+            audio.currentTime = 0;
+
+            return;
+        }
+
+        let previous =
+            currentIndex - 1;
+
+        if (previous < 0) {
+            previous =
+                songs.length - 1;
+        }
+
+        currentIndex = previous;
+
+        playSong(
+            songs[currentIndex]
+        );
+
+    }
+);
+
+
+/* ======================================================
+   AUDIO ENDED
+====================================================== */
+
+audio.addEventListener(
+    "ended",
+    () => {
+
+        if (repeat) {
+
+            audio.currentTime = 0;
+
+            audio.play();
+
+            return;
+        }
+
+        nextBtn.click();
+
+    }
+);
+
+
+/* ======================================================
+   AUDIO PLAY
+====================================================== */
+
+audio.addEventListener(
+    "play",
+    () => {
+
+        updatePlayButton(true);
+
+    }
+);
+
+
+/* ======================================================
+   AUDIO PAUSE
+====================================================== */
+
+audio.addEventListener(
+    "pause",
+    () => {
+
+        updatePlayButton(false);
+
+    }
+);
+
+
+/* ======================================================
+   TIME UPDATE
+====================================================== */
+
+audio.addEventListener(
+    "timeupdate",
+    () => {
+
+        if (!audio.duration) {
+            return;
+        }
+
+        const percent =
+            (audio.currentTime /
+                audio.duration) *
+            100;
+
+        progress.value =
+            percent || 0;
+
+        currentTime.textContent =
+            formatTime(
+                audio.currentTime
+            );
+
+    }
+);
+
+
+/* ======================================================
+   LOADED METADATA
+====================================================== */
+
+audio.addEventListener(
+    "loadedmetadata",
+    () => {
+
+        duration.textContent =
+            formatTime(
+                audio.duration
+            );
+
+    }
+);
+
+
+/* ======================================================
+   PROGRESS
+====================================================== */
+
+progress.addEventListener(
+    "input",
+    () => {
+
+        if (!audio.duration) {
+            return;
+        }
+
+        audio.currentTime =
+            (
+                Number(progress.value) /
+                100
+            ) *
+            audio.duration;
+
+    }
+);
+
+
+/* ======================================================
+   VOLUME
+====================================================== */
+
+volume.addEventListener(
+    "input",
+    () => {
+
+        audio.volume =
+            Number(volume.value);
+
+        if (audio.volume === 0) {
+            muteBtn.textContent = "🔇";
+        } else {
+            muteBtn.textContent = "🔊";
+        }
+
+    }
+);
+
+
+/* ======================================================
+   MUTE
+====================================================== */
+
+muteBtn.addEventListener(
+    "click",
+    () => {
+
+        audio.muted =
+            !audio.muted;
+
+        muteBtn.textContent =
+            audio.muted
+                ? "🔇"
+                : "🔊";
+
+    }
+);
+
+
+/* ======================================================
+   SHUFFLE
+====================================================== */
+
+shuffleBtn.addEventListener(
+    "click",
+    () => {
+
+        shuffle =
+            !shuffle;
+
+        shuffleBtn.style.background =
+            shuffle
+                ? "rgba(155,92,255,.4)"
+                : "";
+
+    }
+);
+
+
+/* ======================================================
+   REPEAT
+====================================================== */
+
+repeatBtn.addEventListener(
+    "click",
+    () => {
+
+        repeat =
+            !repeat;
+
+        repeatBtn.style.background =
+            repeat
+                ? "rgba(155,92,255,.4)"
+                : "";
+
+    }
+);
+
+
+/* ======================================================
+   SEARCH
+====================================================== */
+
+function searchSongs(value) {
+
+    const query =
+        value
+            .trim()
+            .toLowerCase();
+
+    if (!query) {
+
+        showAllSongs();
+
+        return;
+    }
+
+    filteredSongs =
+        songs.filter(
+            song =>
+                song.title
+                    .toLowerCase()
+                    .includes(query) ||
+
+                song.artist
+                    .toLowerCase()
+                    .includes(query) ||
+
+                song.album
+                    .toLowerCase()
+                    .includes(query) ||
+
+                song.category
+                    .toLowerCase()
+                    .includes(query)
+        );
+
+    songHeading.textContent =
+        "Search Results";
+
+    renderSongs();
+
+}
+
+
+/* ======================================================
+   SEARCH INPUT
+====================================================== */
+
+if (searchInput) {
+
+    searchInput.addEventListener(
+        "input",
+        () => {
+
+            searchSongs(
+                searchInput.value
+            );
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   SEARCH BUTTON
+====================================================== */
+
+const searchBtn =
+    document.getElementById(
+        "searchBtn"
+    );
+
+const searchPanel =
+    document.getElementById(
+        "searchPanel"
+    );
+
+if (searchBtn) {
+
+    searchBtn.addEventListener(
+        "click",
+        () => {
+
+            searchPanel.classList.toggle(
+                "open"
+            );
+
+            if (
+                searchPanel.classList.contains(
+                    "open"
+                )
+            ) {
+
+                setTimeout(
+                    () => {
+                        searchInput.focus();
+                    },
+                    100
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   CLEAR SEARCH
+====================================================== */
+
+const clearSearch =
+    document.getElementById(
+        "clearSearch"
+    );
+
+if (clearSearch) {
+
+    clearSearch.addEventListener(
+        "click",
+        () => {
+
+            searchInput.value = "";
+
+            showAllSongs();
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   MOBILE MENU
+====================================================== */
+
+const menuBtn =
+    document.getElementById(
+        "menuBtn"
+    );
+
+const sideNav =
+    document.getElementById(
+        "sideNav"
+    );
+
+if (menuBtn) {
+
+    menuBtn.addEventListener(
+        "click",
+        () => {
+
+            sideNav.classList.toggle(
+                "open"
+            );
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   START LISTENING
+====================================================== */
+
+const startListening =
+    document.getElementById(
+        "startListening"
+    );
+
+if (startListening) {
+
+    startListening.addEventListener(
+        "click",
+        () => {
+
+            if (!songs.length) {
+                return;
+            }
+
+            currentIndex = 0;
+
+            playSong(
+                songs[0]
+            );
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   REFRESH
+====================================================== */
+
+const refreshBtn =
+    document.getElementById(
+        "refreshBtn"
+    );
+
+if (refreshBtn) {
+
+    refreshBtn.addEventListener(
+        "click",
+        () => {
+
+            loadSongs();
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   VIEW MODE
+====================================================== */
+
+const viewBtn =
+    document.getElementById(
+        "viewBtn"
+    );
+
+if (viewBtn) {
+
+    viewBtn.addEventListener(
+        "click",
+        () => {
+
+            document.body.classList.toggle(
+                "compact-view"
+            );
+
+        }
+    );
+
+}
+
+
+/* ======================================================
+   KEYBOARD SHORTCUTS
+====================================================== */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        /*
+         * Do not trigger shortcuts while
+         * typing in an input.
+         */
+
+        if (
+            event.target.tagName ===
+            "INPUT"
+        ) {
+            return;
+        }
+
+        if (
+            event.code ===
+            "Space"
+        ) {
+
+            event.preventDefault();
+
+            playBtn.click();
+
+        }
+
+        if (
+            event.code ===
+            "ArrowRight"
+        ) {
+
+            nextBtn.click();
+
+        }
+
+        if (
+            event.code ===
+            "ArrowLeft"
+        ) {
+
+            prevBtn.click();
+
+        }
+
+    }
+);
+
+
+/* ======================================================
+   FORMAT TIME
+====================================================== */
 
 function formatTime(seconds) {
 
     if (
         !Number.isFinite(seconds)
     ) {
-
         return "0:00";
     }
 
@@ -1433,809 +1447,47 @@ function formatTime(seconds) {
     return (
         minutes +
         ":" +
-        String(secs).padStart(
-            2,
-            "0"
-        )
-    );
-}
-
-
-/* =========================================================
-   CATEGORIES
-   ========================================================= */
-
-function getCategories() {
-
-    const map =
-        new Map();
-
-    songs.forEach(song => {
-
-        const category =
-            song.category ||
-            "Other";
-
-        if (!map.has(category)) {
-
-            map.set(
-                category,
-                0
-            );
-
-        }
-
-        map.set(
-            category,
-            map.get(category) + 1
-        );
-
-    });
-
-    return Array.from(
-        map.entries()
-    );
-}
-
-
-function getCategoryMeta(category) {
-
-    return (
-        CATEGORY_META[category] ||
-        CATEGORY_META.Other
-    );
-}
-
-
-function renderCategories() {
-
-    const categories =
-        getCategories();
-
-    const html =
-        categories.length
-            ? categories
-                .map(
-                    ([category, count]) =>
-                        createCategoryCard(
-                            category,
-                            count
-                        )
-                )
-                .join("")
-            : `
-                <div class="loading-card">
-                    Categories will appear when songs are available.
-                </div>
-              `;
-
-    categoryGrid.innerHTML =
-        html;
-
-    allCategoryGrid.innerHTML =
-        html;
-
-    attachCategoryEvents(
-        categoryGrid
-    );
-
-    attachCategoryEvents(
-        allCategoryGrid
-    );
-}
-
-
-function createCategoryCard(
-    category,
-    count
-) {
-
-    const meta =
-        getCategoryMeta(
-            category
-        );
-
-    return `
-        <article
-            class="category-card"
-            style="--category-color:${meta.color}"
-            data-category="${escapeAttribute(category)}"
-        >
-
-            <div class="category-icon">
-                ${meta.icon}
-            </div>
-
-            <strong>
-                ${escapeHtml(category)}
-            </strong>
-
-            <span>
-                ${count}
-                ${count === 1 ? "song" : "songs"}
-            </span>
-
-        </article>
-    `;
-}
-
-
-function attachCategoryEvents(
-    container
-) {
-
-    container
-        .querySelectorAll(
-            "[data-category]"
-        )
-        .forEach(card => {
-
-            card.addEventListener(
-                "click",
-                () => {
-
-                    const category =
-                        card.dataset.category;
-
-                    const results =
-                        songs.filter(
-                            song =>
-                                song.category
-                                    .toLowerCase() ===
-                                category.toLowerCase()
-                        );
-
-                    filteredSongs =
-                        results;
-
-                    navigateTo(
-                        "search"
-                    );
-
-                    renderSearchResults(
-                        results
-                    );
-
-                    searchInput.value =
-                        category;
-
-                    clearSearch.classList.remove(
-                        "hidden"
-                    );
-
-                }
-            );
-
-        });
-}
-
-
-/* =========================================================
-   LIBRARY / LIKES
-   ========================================================= */
-
-function isLiked(id) {
-
-    return likedSongs.includes(
-        String(id)
-    );
-}
-
-
-function toggleLike() {
-
-    if (currentIndex === -1) {
-
-        showToast(
-            "Play a song first"
-        );
-
-        return;
-    }
-
-    const id =
-        String(
-            songs[currentIndex].id
-        );
-
-    if (isLiked(id)) {
-
-        likedSongs =
-            likedSongs.filter(
-                item => item !== id
-            );
-
-        showToast(
-            "Removed from liked songs"
-        );
-
-    } else {
-
-        likedSongs.push(id);
-
-        showToast(
-            "Added to liked songs"
-        );
-
-    }
-
-    localStorage.setItem(
-        "swaraj-liked",
-        JSON.stringify(
-            likedSongs
-        )
-    );
-
-    updateLikeButton();
-
-    renderLibrary();
-}
-
-
-function updateLikeButton() {
-
-    if (
-        currentIndex === -1
-    ) {
-
-        likeButton.textContent =
-            "♡";
-
-        likeButton.classList.remove(
-            "liked"
-        );
-
-        return;
-    }
-
-    const liked =
-        isLiked(
-            songs[currentIndex].id
-        );
-
-    likeButton.textContent =
-        liked
-            ? "♥"
-            : "♡";
-
-    likeButton.classList.toggle(
-        "liked",
-        liked
-    );
-}
-
-
-function renderLibrary() {
-
-    const liked =
-        songs.filter(
-            song =>
-                isLiked(song.id)
-        );
-
-    if (!liked.length) {
-
-        renderEmpty(
-            "No liked songs yet.",
-            libraryResults
-        );
-
-        return;
-    }
-
-    libraryResults.innerHTML =
-        liked
-            .map(
-                song =>
-                    createSongCard(song)
-            )
-            .join("");
-
-    attachSongEvents(
-        libraryResults
-    );
-}
-
-
-/* =========================================================
-   QUEUE
-   ========================================================= */
-
-function renderQueue() {
-
-    if (
-        !queueList
-    ) return;
-
-    if (
-        !songs.length
-    ) {
-
-        renderEmpty(
-            "Queue is empty.",
-            queueList
-        );
-
-        return;
-    }
-
-    const queue =
-        songs.slice(
-            currentIndex >= 0
-                ? currentIndex + 1
-                : 0
-        );
-
-    if (!queue.length) {
-
-        renderEmpty(
-            "No more songs in queue.",
-            queueList
-        );
-
-        return;
-    }
-
-    queueList.innerHTML =
-        queue
-            .map(
-                song =>
-                    `
-                    <div
-                        class="queue-item"
-                        data-song-id="${escapeAttribute(song.id)}"
-                    >
-
-                        <div class="queue-cover">
-
-                            ${
-                                song.cover
-                                    ? `
-                                        <img
-                                            src="${escapeAttribute(song.cover)}"
-                                            alt=""
-                                            style="
-                                                width:100%;
-                                                height:100%;
-                                                object-fit:cover;
-                                            "
-                                        >
-                                      `
-                                    : "♪"
-                            }
-
-                        </div>
-
-                        <div class="queue-info">
-
-                            <strong>
-                                ${escapeHtml(song.title)}
-                            </strong>
-
-                            <span>
-                                ${escapeHtml(song.artist)}
-                            </span>
-
-                        </div>
-
-                        <span>
-                            ▶
-                        </span>
-
-                    </div>
-                    `
-            )
-            .join("");
-
-    queueList
-        .querySelectorAll(
-            "[data-song-id]"
-        )
-        .forEach(item => {
-
-            item.addEventListener(
-                "click",
-                () => {
-
-                    playSongById(
-                        item.dataset.songId
-                    );
-
-                }
-            );
-
-        });
-}
-
-
-/* =========================================================
-   HERO
-   ========================================================= */
-
-function setupHero() {
-
-    document
-        .getElementById("heroPlay")
-        ?.addEventListener(
-            "click",
-            () => {
-
-                if (!songs.length) {
-
-                    showToast(
-                        "No songs available"
-                    );
-
-                    return;
-                }
-
-                if (
-                    currentIndex === -1
-                ) {
-
-                    playSongById(
-                        songs[0].id
-                    );
-
-                } else {
-
-                    togglePlay();
-
-                }
-
-            }
-        );
-
-    document
-        .getElementById("heroExplore")
-        ?.addEventListener(
-            "click",
-            () => {
-
-                navigateTo(
-                    "categories"
-                );
-
-            }
-        );
-
-    document
-        .getElementById(
-            "seeAllCategories"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                navigateTo(
-                    "categories"
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   EXTRA BUTTONS
-   ========================================================= */
-
-function setupExtraButtons() {
-
-    likeButton.addEventListener(
-        "click",
-        toggleLike
-    );
-
-    document
-        .getElementById(
-            "queueButton"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                navigateTo(
-                    "queue"
-                );
-
-                renderQueue();
-
-            }
-        );
-
-    document
-        .getElementById(
-            "themeButton"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                document.body.classList.toggle(
-                    "soft-mode"
-                );
-
-                showToast(
-                    "Visual mode updated"
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   INTERFACE SWITCHER
-   ========================================================= */
-
-function setupInterfaceSwitcher() {
-
-    const mobile =
-        document.getElementById(
-            "mobileModeBtn"
-        );
-
-    const desktop =
-        document.getElementById(
-            "desktopModeBtn"
-        );
-
-    mobile?.addEventListener(
-        "click",
-        () => {
-
-            document.body.classList.add(
-                "mobile-interface"
-            );
-
-            mobile.classList.add(
-                "active"
-            );
-
-            desktop.classList.remove(
-                "active"
-            );
-
-            localStorage.setItem(
-                "swaraj-interface",
-                "mobile"
-            );
-
-        }
-    );
-
-    desktop?.addEventListener(
-        "click",
-        () => {
-
-            document.body.classList.remove(
-                "mobile-interface"
-            );
-
-            desktop.classList.add(
-                "active"
-            );
-
-            mobile.classList.remove(
-                "active"
-            );
-
-            localStorage.setItem(
-                "swaraj-interface",
-                "desktop"
-            );
-
-        }
-    );
-
-    const saved =
-        localStorage.getItem(
-            "swaraj-interface"
-        );
-
-    if (saved === "mobile") {
-
-        mobile?.click();
-
-    }
-
-}
-
-
-/* =========================================================
-   MOBILE MENU
-   ========================================================= */
-
-function setupMobileMenu() {
-
-    const menu =
-        document.getElementById(
-            "mobileMenu"
-        );
-
-    const sidebar =
-        document.querySelector(
-            ".sidebar"
-        );
-
-    menu?.addEventListener(
-        "click",
-        () => {
-
-            sidebar.classList.toggle(
-                "open"
-            );
-
-        }
+        String(secs).padStart(2, "0")
     );
 
 }
 
 
-/* =========================================================
-   HELPERS
-   ========================================================= */
-
-function updateSongCount() {
-
-    songCount.textContent =
-        `${songs.length} ${
-            songs.length === 1
-                ? "song"
-                : "songs"
-        }`;
-}
-
-
-function showLoading() {
-
-    songGrid.innerHTML =
-        `
-            <div class="empty-state">
-                Loading your music...
-            </div>
-        `;
-
-}
-
-
-function renderEmpty(
-    message,
-    container = songGrid
-) {
-
-    if (!container) return;
-
-    container.innerHTML =
-        `
-            <div class="empty-state">
-                ${escapeHtml(message)}
-            </div>
-        `;
-}
-
-
-function showToast(message) {
-
-    if (!toast) return;
-
-    toastText.textContent =
-        message;
-
-    toast.classList.add(
-        "show"
-    );
-
-    clearTimeout(
-        showToast.timer
-    );
-
-    showToast.timer =
-        setTimeout(
-            () => {
-
-                toast.classList.remove(
-                    "show"
-                );
-
-            },
-            2500
-        );
-}
-
-
-/* =========================================================
-   SECURITY
-   ========================================================= */
+/* ======================================================
+   ESCAPE HTML
+====================================================== */
 
 function escapeHtml(value) {
 
-    return String(
-        value ?? ""
-    )
-        .replaceAll(
-            "&",
+    return String(value)
+        .replace(
+            /&/g,
             "&amp;"
         )
-        .replaceAll(
-            "<",
+        .replace(
+            /</g,
             "&lt;"
         )
-        .replaceAll(
-            ">",
+        .replace(
+            />/g,
             "&gt;"
         )
-        .replaceAll(
-            '"',
+        .replace(
+            /"/g,
             "&quot;"
         )
-        .replaceAll(
-            "'",
+        .replace(
+            /'/g,
             "&#039;"
         );
+
 }
 
 
-function escapeAttribute(value) {
+/* ======================================================
+   INITIALIZE
+====================================================== */
 
-    return escapeHtml(
-        value
-    );
-}
+audio.volume = 0.8;
 
-
-/* =========================================================
-   GLOBAL DEBUG
-   ========================================================= */
-
-window.swarAJ = {
-
-    getSongs() {
-        return songs;
-    },
-
-    getCurrentSong() {
-
-        return currentIndex >= 0
-            ? songs[currentIndex]
-            : null;
-
-    },
-
-    play(id) {
-
-        playSongById(id);
-
-    },
-
-    next() {
-
-        playNext();
-
-    },
-
-    previous() {
-
-        playPrevious();
-
-    },
-
-    reload() {
-
-        loadSongs()
-            .then(() => {
-
-                renderCategories();
-
-                renderSongs(
-                    songs
-                );
-
-            });
-
-    }
-
-};
+loadSongs();
