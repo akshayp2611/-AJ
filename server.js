@@ -6,9 +6,9 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-const ROOT = __dirname;
-const SONGS_DIR = path.join(ROOT, "songs");
-const IMAGES_DIR = path.join(ROOT, "images");
+const ROOT_DIR = __dirname;
+const SONGS_DIR = path.join(ROOT_DIR, "songs");
+const IMAGES_DIR = path.join(ROOT_DIR, "images");
 
 const AUDIO_EXTENSIONS = new Set([
   ".mp3",
@@ -30,22 +30,26 @@ const IMAGE_EXTENSIONS = new Set([
 
 app.disable("x-powered-by");
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 
-function ensureDirectories() {
-  if (!fs.existsSync(SONGS_DIR)) {
-    fs.mkdirSync(SONGS_DIR, { recursive: true });
-  }
+/* =========================================================
+   DIRECTORIES
+========================================================= */
 
-  if (!fs.existsSync(IMAGES_DIR)) {
-    fs.mkdirSync(IMAGES_DIR, { recursive: true });
-  }
+if (!fs.existsSync(SONGS_DIR)) {
+  fs.mkdirSync(SONGS_DIR, { recursive: true });
 }
 
-ensureDirectories();
+if (!fs.existsSync(IMAGES_DIR)) {
+  fs.mkdirSync(IMAGES_DIR, { recursive: true });
+}
 
-function cleanName(filename) {
-  return filename
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function cleanName(name) {
+  return name
     .replace(/\.[^/.]+$/, "")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
@@ -58,6 +62,10 @@ function encodePath(parts) {
     .join("/");
 }
 
+/* =========================================================
+   SCAN SONGS RECURSIVELY
+========================================================= */
+
 function scanSongs() {
   const songs = [];
 
@@ -65,60 +73,83 @@ function scanSongs() {
     return songs;
   }
 
-  function walk(directory) {
-    let entries = [];
+  function scanDirectory(directory) {
+    let entries;
 
     try {
       entries = fs.readdirSync(directory, {
         withFileTypes: true
       });
     } catch (error) {
-      console.error("Unable to read directory:", directory, error.message);
+      console.error(
+        "Directory read error:",
+        directory,
+        error.message
+      );
+
       return;
     }
 
     for (const entry of entries) {
-      const absolutePath = path.join(directory, entry.name);
+      const fullPath = path.join(
+        directory,
+        entry.name
+      );
 
       if (entry.isDirectory()) {
-        walk(absolutePath);
+        scanDirectory(fullPath);
         continue;
       }
 
-      const extension = path.extname(entry.name).toLowerCase();
+      const extension =
+        path.extname(entry.name).toLowerCase();
 
       if (!AUDIO_EXTENSIONS.has(extension)) {
         continue;
       }
 
-      const relativePath = path.relative(SONGS_DIR, absolutePath);
-      const pathParts = relativePath.split(path.sep);
+      const relativePath =
+        path.relative(
+          SONGS_DIR,
+          fullPath
+        );
+
+      const parts =
+        relativePath.split(path.sep);
 
       const category =
-        pathParts.length > 1
-          ? cleanName(pathParts[0])
+        parts.length > 1
+          ? cleanName(parts[0])
           : "All Songs";
 
-      const filename = entry.name;
-
-      let stats;
+      let stats = null;
 
       try {
-        stats = fs.statSync(absolutePath);
-      } catch {
-        stats = null;
-      }
+        stats = fs.statSync(fullPath);
+      } catch {}
 
       songs.push({
-        id: Buffer.from(relativePath).toString("base64url"),
-        title: cleanName(filename),
-        filename,
+        id: Buffer
+          .from(relativePath)
+          .toString("base64url"),
+
+        title: cleanName(entry.name),
+
+        filename: entry.name,
+
         category,
-        extension: extension.substring(1),
-        size: stats ? stats.size : 0,
+
+        extension:
+          extension.replace(".", ""),
+
+        size: stats
+          ? stats.size
+          : 0,
+
         url:
           "/songs/" +
-          encodePath(pathParts),
+          encodePath(parts),
+
         cover:
           "/api/cover/" +
           encodeURIComponent(category)
@@ -126,17 +157,25 @@ function scanSongs() {
     }
   }
 
-  walk(SONGS_DIR);
+  scanDirectory(SONGS_DIR);
 
   songs.sort((a, b) =>
-    a.title.localeCompare(b.title, undefined, {
-      numeric: true,
-      sensitivity: "base"
-    })
+    a.title.localeCompare(
+      b.title,
+      undefined,
+      {
+        numeric: true,
+        sensitivity: "base"
+      }
+    )
   );
 
   return songs;
 }
+
+/* =========================================================
+   COVER FINDER
+========================================================= */
 
 function findCover(category) {
   const possibleNames = [
@@ -150,34 +189,44 @@ function findCover(category) {
 
   for (const name of possibleNames) {
     for (const extension of IMAGE_EXTENSIONS) {
-      const file = path.join(IMAGES_DIR, name + extension);
+      const filePath =
+        path.join(
+          IMAGES_DIR,
+          name + extension
+        );
 
-      if (fs.existsSync(file)) {
-        return file;
+      if (fs.existsSync(filePath)) {
+        return filePath;
       }
     }
   }
 
-  let files = [];
-
   try {
-    files = fs.readdirSync(IMAGES_DIR);
-  } catch {
-    return null;
-  }
+    const files =
+      fs.readdirSync(IMAGES_DIR);
 
-  const image = files.find((file) =>
-    IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase())
-  );
+    const image =
+      files.find((file) =>
+        IMAGE_EXTENSIONS.has(
+          path.extname(file)
+            .toLowerCase()
+        )
+      );
 
-  return image ? path.join(IMAGES_DIR, image) : null;
+    if (image) {
+      return path.join(
+        IMAGES_DIR,
+        image
+      );
+    }
+  } catch {}
+
+  return null;
 }
 
-/*
-|--------------------------------------------------------------------------
-| API
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   HEALTH
+========================================================= */
 
 app.get("/api/health", (req, res) => {
   const songs = scanSongs();
@@ -185,14 +234,28 @@ app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
     service: "स्वरAJ Music",
-    environment: process.env.NODE_ENV || "production",
-    port: PORT,
-    songsDirectory: SONGS_DIR,
-    songsDirectoryExists: fs.existsSync(SONGS_DIR),
-    songCount: songs.length,
-    timestamp: new Date().toISOString()
+    nodeVersion: process.version,
+    environment:
+      process.env.NODE_ENV ||
+      "production",
+
+    songsDirectoryExists:
+      fs.existsSync(SONGS_DIR),
+
+    imagesDirectoryExists:
+      fs.existsSync(IMAGES_DIR),
+
+    songCount:
+      songs.length,
+
+    timestamp:
+      new Date().toISOString()
   });
 });
+
+/* =========================================================
+   SONG API
+========================================================= */
 
 app.get("/api/songs", (req, res) => {
   try {
@@ -204,38 +267,56 @@ app.get("/api/songs", (req, res) => {
       songs
     });
   } catch (error) {
-    console.error("Song scan failed:", error);
+    console.error(
+      "Song API error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
       count: 0,
       songs: [],
-      error: "Unable to scan songs"
+      error:
+        "Unable to scan music library"
     });
   }
 });
+
+/* =========================================================
+   CATEGORY API
+========================================================= */
 
 app.get("/api/categories", (req, res) => {
   try {
     const songs = scanSongs();
 
-    const map = new Map();
+    const categoryMap = new Map();
 
     for (const song of songs) {
-      if (!map.has(song.category)) {
-        map.set(song.category, {
-          name: song.category,
-          count: 0,
-          cover: song.cover
-        });
+      if (!categoryMap.has(song.category)) {
+        categoryMap.set(
+          song.category,
+          {
+            name: song.category,
+            count: 0,
+            cover: song.cover
+          }
+        );
       }
 
-      map.get(song.category).count++;
+      categoryMap.get(
+        song.category
+      ).count++;
     }
 
-    const categories = Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    const categories =
+      Array.from(
+        categoryMap.values()
+      ).sort((a, b) =>
+        a.name.localeCompare(
+          b.name
+        )
+      );
 
     res.json({
       success: true,
@@ -243,7 +324,10 @@ app.get("/api/categories", (req, res) => {
       categories
     });
   } catch (error) {
-    console.error("Category scan failed:", error);
+    console.error(
+      "Category API error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -253,10 +337,15 @@ app.get("/api/categories", (req, res) => {
   }
 });
 
+/* =========================================================
+   SEARCH API
+========================================================= */
+
 app.get("/api/search", (req, res) => {
-  const query = String(req.query.q || "")
-    .trim()
-    .toLowerCase();
+  const query =
+    String(req.query.q || "")
+      .trim()
+      .toLowerCase();
 
   if (!query) {
     return res.json({
@@ -268,13 +357,20 @@ app.get("/api/search", (req, res) => {
 
   const songs = scanSongs();
 
-  const results = songs.filter((song) => {
-    return (
-      song.title.toLowerCase().includes(query) ||
-      song.category.toLowerCase().includes(query) ||
-      song.filename.toLowerCase().includes(query)
+  const results =
+    songs.filter((song) =>
+      song.title
+        .toLowerCase()
+        .includes(query) ||
+
+      song.category
+        .toLowerCase()
+        .includes(query) ||
+
+      song.filename
+        .toLowerCase()
+        .includes(query)
     );
-  });
 
   res.json({
     success: true,
@@ -283,34 +379,57 @@ app.get("/api/search", (req, res) => {
   });
 });
 
-app.get("/api/cover/:category", (req, res) => {
-  const category = decodeURIComponent(req.params.category || "");
+/* =========================================================
+   COVER API
+========================================================= */
 
-  const cover = findCover(category);
+app.get(
+  "/api/cover/:category",
+  (req, res) => {
+    const category =
+      decodeURIComponent(
+        req.params.category || ""
+      );
 
-  if (!cover) {
-    return res.status(404).send("Cover not found");
+    const cover =
+      findCover(category);
+
+    if (!cover) {
+      return res.status(404).send(
+        "Cover not found"
+      );
+    }
+
+    res.sendFile(cover);
   }
+);
 
-  res.sendFile(cover);
-});
-
-/*
-|--------------------------------------------------------------------------
-| Static files
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   SONG FILES
+========================================================= */
 
 app.use(
   "/songs",
   express.static(SONGS_DIR, {
     fallthrough: false,
+
     setHeaders: (res) => {
-      res.setHeader("Cache-Control", "public, max-age=31536000");
-      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=31536000"
+      );
+
+      res.setHeader(
+        "Accept-Ranges",
+        "bytes"
+      );
     }
   })
 );
+
+/* =========================================================
+   IMAGES
+========================================================= */
 
 app.use(
   "/images",
@@ -319,78 +438,157 @@ app.use(
   })
 );
 
+/* =========================================================
+   FRONTEND STATIC FILES
+========================================================= */
+
 app.use(
-  express.static(ROOT, {
-    extensions: ["html"]
+  express.static(ROOT_DIR, {
+    index: "index.html"
   })
 );
 
-/*
-|--------------------------------------------------------------------------
-| SPA fallback
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   FRONTEND FALLBACK
+   IMPORTANT:
+   Express 5 requires named wildcard syntax.
+========================================================= */
 
-app.get("*", (req, res) => {
-  if (
-    req.path.startsWith("/api/") ||
-    req.path.startsWith("/songs/") ||
-    req.path.startsWith("/images/")
-  ) {
-    return res.status(404).json({
-      error: "Not found"
+app.get(
+  "/{*splat}",
+  (req, res) => {
+
+    if (
+      req.path.startsWith("/api/") ||
+      req.path.startsWith("/songs/") ||
+      req.path.startsWith("/images/")
+    ) {
+      return res.status(404).json({
+        success: false,
+        error: "Not found"
+      });
+    }
+
+    const indexFile =
+      path.join(
+        ROOT_DIR,
+        "index.html"
+      );
+
+    if (!fs.existsSync(indexFile)) {
+      return res.status(404).send(
+        "index.html not found"
+      );
+    }
+
+    res.sendFile(indexFile);
+  }
+);
+
+/* =========================================================
+   ERROR HANDLER
+========================================================= */
+
+app.use(
+  (error, req, res, next) => {
+    console.error(
+      "Unhandled server error:",
+      error
+    );
+
+    if (res.headersSent) {
+      return next(error);
+    }
+
+    res.status(500).json({
+      success: false,
+      error:
+        "Internal server error"
     });
   }
+);
 
-  res.sendFile(path.join(ROOT, "index.html"));
-});
+/* =========================================================
+   START SERVER
+========================================================= */
 
-/*
-|--------------------------------------------------------------------------
-| Error handler
-|--------------------------------------------------------------------------
-*/
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
 
-app.use((error, req, res, next) => {
-  console.error("Server error:", error);
+    const songs =
+      scanSongs();
 
-  if (res.headersSent) {
-    return next(error);
+    console.log("");
+    console.log(
+      "========================================"
+    );
+
+    console.log(
+      "        स्वरAJ PREMIUM MUSIC"
+    );
+
+    console.log(
+      "========================================"
+    );
+
+    console.log(
+      `Node: ${process.version}`
+    );
+
+    console.log(
+      `Port: ${PORT}`
+    );
+
+    console.log(
+      `Songs directory: ${SONGS_DIR}`
+    );
+
+    console.log(
+      `Songs found: ${songs.length}`
+    );
+
+    console.log(
+      `Songs directory exists: ${
+        fs.existsSync(SONGS_DIR)
+      }`
+    );
+
+    console.log(
+      "========================================"
+    );
+
+    if (songs.length === 0) {
+      console.log(
+        "WARNING: No audio files found."
+      );
+    } else {
+
+      const categories = {};
+
+      for (const song of songs) {
+        categories[song.category] =
+          (categories[song.category] || 0) + 1;
+      }
+
+      console.log(
+        "Music categories:"
+      );
+
+      for (
+        const [category, count]
+        of Object.entries(categories)
+      ) {
+        console.log(
+          `  ${category}: ${count}`
+        );
+      }
+    }
+
+    console.log(
+      "========================================"
+    );
+    console.log("");
   }
-
-  res.status(500).json({
-    success: false,
-    error: "Internal server error"
-  });
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-  const songs = scanSongs();
-
-  console.log("==========================================");
-  console.log(" स्वरAJ Premium Music Server");
-  console.log("==========================================");
-  console.log(`Port: ${PORT}`);
-  console.log(`Songs directory: ${SONGS_DIR}`);
-  console.log(`Songs found: ${songs.length}`);
-
-  if (songs.length === 0) {
-    console.warn("WARNING: No audio files found.");
-    console.warn("Add MP3 files inside the songs/ directory.");
-  } else {
-    console.log("Music library:");
-
-    const categories = {};
-
-    songs.forEach((song) => {
-      categories[song.category] =
-        (categories[song.category] || 0) + 1;
-    });
-
-    Object.entries(categories).forEach(([name, count]) => {
-      console.log(`  ${name}: ${count}`);
-    });
-  }
-
-  console.log("==========================================");
-});
+);
