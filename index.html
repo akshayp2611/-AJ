@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#080b14">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070912">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="स्वरAJ - Premium Music Player">
-
-  <title>स्वरAJ Music</title>
+  <meta name="description" content="स्वरAJ 🎵 - Premium Music Player">
+  <title>स्वरAJ 🎵 — Music</title>
 
   <link rel="stylesheet" href="styles.css">
 
@@ -28,58 +27,83 @@
   <aside id="sidebar" class="sidebar">
 
     <div class="brand">
+
       <div class="brand-orbit">
-        <div class="brand-disc">स्वरAJ</div>
+        <div class="brand-disc">स्वर</div>
       </div>
 
       <div class="brand-text">
-        <strong>स्वरAJ</strong>
+        <strong>स्वरAJ 🎵</strong>
         <span>Premium Music</span>
       </div>
 
-      <button id="closeMenu" class="icon-btn mobile-close" aria-label="Close menu">
+      <button
+        id="closeMenu"
+        class="icon-btn mobile-close"
+        aria-label="Close menu"
+      >
         <i class="fa-solid fa-xmark"></i>
       </button>
+
     </div>
+
 
     <nav class="main-nav">
 
-      <button class="nav-item active" data-section="home">
-        <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
+      <button
+        class="nav-item active"
+        data-section="home"
+        type="button"
+      >
+        <span class="nav-icon">
+          <i class="fa-solid fa-house"></i>
+        </span>
         <span>Home</span>
       </button>
 
-      <button class="nav-item" data-section="search">
-        <span class="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+      <button
+        class="nav-item"
+        data-section="search"
+        type="button"
+      >
+        <span class="nav-icon">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
         <span>Search</span>
       </button>
 
-      <button class="nav-item" data-section="library">
-        <span class="nav-icon"><i class="fa-solid fa-book-open"></i></span>
+      <button
+        class="nav-item"
+        data-section="library"
+        type="button"
+      >
+        <span class="nav-icon">
+          <i class="fa-solid fa-book-open"></i>
+        </span>
         <span>Library</span>
       </button>
 
     </nav>
 
+
     <div class="side-heading">
-      <span>Browse</span>
+      Browse Categories
     </div>
 
-    <div id="categoryList" class="category-list">
-      <button class="category-btn active" data-category="all">
-        <i class="fa-solid fa-layer-group"></i>
-        <span>All Songs</span>
-      </button>
-    </div>
+    <div id="categoryList" class="category-list"></div>
+
 
     <div class="sidebar-bottom">
+
       <div class="mini-status">
         <span class="status-dot"></span>
+
         <div>
-          <strong>स्वरAJ Player</strong>
+          <strong>स्वरAJ 🎵 Player</strong>
           <small id="serverStatus">Connecting...</small>
         </div>
       </div>
+
     </div>
 
   </aside>
@@ -88,19 +112,28 @@
   <!-- MAIN -->
   <main class="main">
 
-    <!-- HEADER -->
+    <!-- TOP BAR -->
     <header class="topbar">
 
-      <button id="menuButton" class="menu-btn" aria-label="Open menu">
+      <button
+        id="menuButton"
+        class="menu-btn"
+        aria-label="Open menu"
+        aria-expanded="false"
+        type="button"
+      >
         <i class="fa-solid fa-bars"></i>
       </button>
 
+
       <div class="mobile-logo">
-        <div class="mobile-logo-disc">स्व</div>
-        <strong>स्वरAJ</strong>
+        <div class="mobile-logo-disc">स्वर</div>
+        <strong>स्वरAJ 🎵</strong>
       </div>
 
+
       <div class="search-box">
+
         <i class="fa-solid fa-magnifying-glass"></i>
 
         <input
@@ -108,21 +141,41 @@
           type="search"
           placeholder="Search songs, artists or albums..."
           autocomplete="off"
+          aria-label="Search music"
         >
 
-        <button id="clearSearch" class="search-clear" aria-label="Clear search">
+        <button
+          id="clearSearch"
+          class="search-clear"
+          aria-label="Clear search"
+          type="button"
+        >
           <i class="fa-solid fa-xmark"></i>
         </button>
+
       </div>
 
+
       <div class="top-actions">
-        <button id="refreshBtn" class="glass-btn" title="Refresh songs">
+
+        <button
+          id="refreshBtn"
+          class="glass-btn"
+          title="Refresh songs"
+          type="button"
+        >
           <i class="fa-solid fa-rotate"></i>
         </button>
 
-        <button id="viewToggle" class="glass-btn" title="Change view">
+        <button
+          id="viewToggle"
+          class="glass-btn"
+          title="Change view"
+          type="button"
+        >
           <i class="fa-solid fa-table-cells-large"></i>
         </button>
+
       </div>
 
     </header>
@@ -130,6 +183,7 @@
 
     <!-- CONTENT -->
     <section class="content">
+
 
       <!-- HERO -->
       <section class="hero">
@@ -147,39 +201,52 @@
           </h1>
 
           <p>
-            Discover your personal music collection with the
-            immersive स्वरAJ experience.
+            Discover your personal collection with the
+            immersive स्वरAJ 🎵 music experience.
           </p>
+
 
           <div class="hero-actions">
 
-            <button id="heroPlay" class="liquid-btn primary">
+            <button
+              id="heroPlay"
+              class="liquid-btn primary"
+              type="button"
+            >
               <span class="liquid-icon">
                 <i class="fa-solid fa-play"></i>
               </span>
-              <span>Play Music</span>
+              Play Music
             </button>
 
-            <button id="heroShuffle" class="liquid-btn secondary">
+            <button
+              id="heroShuffle"
+              class="liquid-btn secondary"
+              type="button"
+            >
               <span class="liquid-icon">
                 <i class="fa-solid fa-shuffle"></i>
               </span>
-              <span>Shuffle</span>
+              Shuffle
             </button>
 
           </div>
 
         </div>
 
+
         <div class="hero-visual">
 
-          <div class="hero-orb orb-one"></div>
-          <div class="hero-orb orb-two"></div>
+          <div class="hero-glow glow-a"></div>
+          <div class="hero-glow glow-b"></div>
 
           <div class="hero-disc">
+
             <div class="disc-inner">
               <span>स्वरAJ</span>
+              <small>🎵</small>
             </div>
+
           </div>
 
         </div>
@@ -203,23 +270,13 @@
       </section>
 
 
-      <!-- CATEGORIES -->
-      <section class="category-scroll-section">
+      <!-- MODERN CATEGORIES -->
+      <section class="category-section">
 
-        <div id="categoryCards" class="category-cards">
-
-          <button class="category-card active" data-category="all">
-            <div class="category-card-icon">
-              <i class="fa-solid fa-music"></i>
-            </div>
-
-            <div>
-              <strong>All Songs</strong>
-              <small>Everything</small>
-            </div>
-          </button>
-
-        </div>
+        <div
+          id="categoryCards"
+          class="category-cards"
+        ></div>
 
       </section>
 
@@ -227,29 +284,47 @@
       <!-- SONGS -->
       <section class="songs-section">
 
-        <div id="loadingState" class="state-box">
+        <div
+          id="loadingState"
+          class="state-box"
+        >
           <div class="loader"></div>
           <strong>Loading your music...</strong>
           <small>Scanning your music library</small>
         </div>
 
-        <div id="errorState" class="state-box error-state hidden">
+
+        <div
+          id="errorState"
+          class="state-box error-state hidden"
+        >
+
           <div class="state-icon">
             <i class="fa-solid fa-triangle-exclamation"></i>
           </div>
 
           <strong>Song API could not be loaded</strong>
+
           <small id="errorMessage">
             Please check your server connection.
           </small>
 
-          <button id="retryBtn" class="retry-btn">
+          <button
+            id="retryBtn"
+            class="retry-btn"
+            type="button"
+          >
             <i class="fa-solid fa-rotate"></i>
             Retry
           </button>
+
         </div>
 
-        <div id="emptyState" class="state-box hidden">
+
+        <div
+          id="emptyState"
+          class="state-box hidden"
+        >
 
           <div class="state-icon music-empty">
             <i class="fa-solid fa-music"></i>
@@ -264,7 +339,45 @@
 
         </div>
 
-        <div id="songsGrid" class="songs-grid"></div>
+
+        <div
+          id="songsGrid"
+          class="songs-grid"
+        ></div>
+
+      </section>
+
+
+      <!-- SEARCH VIEW -->
+      <section
+        id="searchView"
+        class="extra-view hidden"
+      >
+
+        <span class="section-kicker">DISCOVER</span>
+
+        <h2>Search Music</h2>
+
+        <p>
+          Search songs, artists, albums and categories.
+        </p>
+
+      </section>
+
+
+      <!-- LIBRARY VIEW -->
+      <section
+        id="libraryView"
+        class="extra-view hidden"
+      >
+
+        <span class="section-kicker">LIBRARY</span>
+
+        <h2>Your Music Library</h2>
+
+        <p>
+          Your complete स्वरAJ 🎵 collection.
+        </p>
 
       </section>
 
@@ -273,21 +386,36 @@
   </main>
 
 
-  <!-- AUDIO PLAYER -->
+  <!-- PLAYER -->
   <footer class="player">
 
     <div class="player-left">
 
-      <div id="playerCover" class="player-cover">
-        <div>स्व</div>
+      <div
+        id="playerCover"
+        class="player-cover"
+      >
+        <div>स्वर</div>
       </div>
 
       <div class="player-info">
-        <strong id="playerTitle">Select a song</strong>
-        <span id="playerArtist">स्वरAJ</span>
+
+        <strong id="playerTitle">
+          Select a song
+        </strong>
+
+        <span id="playerArtist">
+          स्वरAJ 🎵
+        </span>
+
       </div>
 
-      <button id="likeBtn" class="player-like" aria-label="Like">
+      <button
+        id="likeBtn"
+        class="player-like"
+        aria-label="Like"
+        type="button"
+      >
         <i class="fa-regular fa-heart"></i>
       </button>
 
@@ -298,35 +426,69 @@
 
       <div class="player-controls">
 
-        <button id="shuffleBtn" class="player-btn">
+        <button
+          id="shuffleBtn"
+          class="player-btn"
+          type="button"
+          aria-label="Shuffle"
+        >
           <i class="fa-solid fa-shuffle"></i>
         </button>
 
-        <button id="previousBtn" class="player-btn big">
+        <button
+          id="previousBtn"
+          class="player-btn big"
+          type="button"
+          aria-label="Previous"
+        >
           <i class="fa-solid fa-backward-step"></i>
         </button>
 
-        <button id="playBtn" class="play-main">
+        <button
+          id="playBtn"
+          class="play-main"
+          type="button"
+          aria-label="Play"
+        >
           <i class="fa-solid fa-play"></i>
         </button>
 
-        <button id="nextBtn" class="player-btn big">
+        <button
+          id="nextBtn"
+          class="player-btn big"
+          type="button"
+          aria-label="Next"
+        >
           <i class="fa-solid fa-forward-step"></i>
         </button>
 
-        <button id="repeatBtn" class="player-btn">
+        <button
+          id="repeatBtn"
+          class="player-btn"
+          type="button"
+          aria-label="Repeat"
+        >
           <i class="fa-solid fa-repeat"></i>
         </button>
 
       </div>
 
+
       <div class="progress-row">
 
         <span id="currentTime">0:00</span>
 
-        <div id="progressBar" class="progress-bar">
+        <div
+          id="progressBar"
+          class="progress-bar"
+          role="slider"
+          tabindex="0"
+          aria-label="Song progress"
+        >
+
           <div id="progressFill"></div>
           <div id="progressThumb"></div>
+
         </div>
 
         <span id="duration">0:00</span>
@@ -338,7 +500,12 @@
 
     <div class="player-right">
 
-      <button id="volumeBtn" class="player-btn">
+      <button
+        id="volumeBtn"
+        class="player-btn"
+        type="button"
+        aria-label="Volume"
+      >
         <i class="fa-solid fa-volume-high"></i>
       </button>
 
@@ -349,6 +516,7 @@
         max="1"
         step="0.01"
         value="1"
+        aria-label="Volume"
       >
 
     </div>
@@ -358,8 +526,10 @@
 </div>
 
 
-<!-- AUDIO -->
-<audio id="audioPlayer" preload="metadata"></audio>
+<audio
+  id="audioPlayer"
+  preload="metadata"
+></audio>
 
 
 <script src="script.js"></script>
