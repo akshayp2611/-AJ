@@ -10,43 +10,23 @@ const SONGS_DIR = path.join(ROOT, "songs");
 
 app.use(express.json());
 
-// --------------------------------------------------
-// ROOT FRONTEND FILES
-// --------------------------------------------------
+// ==================================================
+// FRONTEND STATIC FILES
+// ==================================================
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(ROOT, "index.html"));
-});
+app.use(express.static(ROOT, {
+  index: false
+}));
 
-app.get("/index.html", (req, res) => {
-  res.sendFile(path.join(ROOT, "index.html"));
-});
-
-app.get("/styles.css", (req, res) => {
-  res.sendFile(path.join(ROOT, "styles.css"));
-});
-
-app.get("/script.js", (req, res) => {
-  res.sendFile(path.join(ROOT, "script.js"));
-});
-
-// --------------------------------------------------
-// IMAGES
-// --------------------------------------------------
-
-app.use(
-  "/images",
-  express.static(path.join(ROOT, "images"))
-);
-
-// --------------------------------------------------
-// SONGS
-// --------------------------------------------------
+// ==================================================
+// SONG FILES
+// ==================================================
 
 app.use(
   "/songs",
   express.static(SONGS_DIR, {
     acceptRanges: true,
+
     setHeaders: (res) => {
       res.setHeader("Accept-Ranges", "bytes");
       res.setHeader(
@@ -57,9 +37,9 @@ app.use(
   })
 );
 
-// --------------------------------------------------
-// SCAN AUDIO FILES
-// --------------------------------------------------
+// ==================================================
+// AUDIO SCANNER
+// ==================================================
 
 function getAudioFiles(
   dir,
@@ -78,7 +58,9 @@ function getAudioFiles(
     const fullPath =
       path.join(dir, item.name);
 
+    // Folder = category
     if (item.isDirectory()) {
+
       getAudioFiles(
         fullPath,
         category || item.name,
@@ -92,104 +74,126 @@ function getAudioFiles(
       path.extname(item.name)
         .toLowerCase();
 
-    if (
-      [
-        ".mp3",
-        ".wav",
-        ".ogg",
-        ".m4a",
-        ".aac",
-        ".flac"
-      ].includes(ext)
-    ) {
-      const relativePath =
-        path.relative(
-          SONGS_DIR,
-          fullPath
-        );
+    const supportedFormats = [
+      ".mp3",
+      ".wav",
+      ".ogg",
+      ".m4a",
+      ".aac",
+      ".flac"
+    ];
 
-      const urlPath =
-        relativePath
-          .split(path.sep)
-          .map(encodeURIComponent)
-          .join("/");
-
-      results.push({
-        id: `song-${results.length + 1}`,
-
-        title:
-          path.basename(
-            item.name,
-            ext
-          ),
-
-        artist: "स्वरAJ",
-
-        album:
-          category || "Music",
-
-        category:
-          category || "Music",
-
-        cover:
-          "/images/default-cover.svg",
-
-        url:
-          `/songs/${urlPath}`,
-
-        file:
-          relativePath.replace(
-            /\\/g,
-            "/"
-          )
-      });
+    if (!supportedFormats.includes(ext)) {
+      continue;
     }
+
+    const relativePath =
+      path.relative(
+        SONGS_DIR,
+        fullPath
+      );
+
+    const urlPath =
+      relativePath
+        .split(path.sep)
+        .map(encodeURIComponent)
+        .join("/");
+
+    results.push({
+
+      id:
+        `song-${results.length + 1}`,
+
+      title:
+        path.basename(
+          item.name,
+          ext
+        ),
+
+      artist:
+        "स्वरAJ",
+
+      album:
+        category || "Music",
+
+      category:
+        category || "Music",
+
+      cover:
+        "/images/default-cover.svg",
+
+      url:
+        `/songs/${urlPath}`,
+
+      file:
+        relativePath.replace(
+          /\\/g,
+          "/"
+        )
+    });
   }
 
   return results;
 }
 
 function getSongs() {
-  return getAudioFiles(SONGS_DIR);
+  return getAudioFiles(
+    SONGS_DIR
+  );
 }
 
-// --------------------------------------------------
-// HEALTH
-// --------------------------------------------------
+// ==================================================
+// HEALTH CHECK
+// ==================================================
 
 app.get(
   "/api/health",
   (req, res) => {
-    const songs = getSongs();
+
+    const songs =
+      getSongs();
 
     res.json({
+
       status: "ok",
+
       songsDirectoryExists:
-        fs.existsSync(SONGS_DIR),
+        fs.existsSync(
+          SONGS_DIR
+        ),
+
       songCount:
         songs.length,
+
       songsDirectory:
         SONGS_DIR
+
     });
   }
 );
 
-// --------------------------------------------------
-// SONGS
-// --------------------------------------------------
+// ==================================================
+// ALL SONGS
+// ==================================================
 
 app.get(
   "/api/songs",
   (req, res) => {
+
     try {
+
       const songs =
         getSongs();
 
       res.json({
+
         success: true,
+
         count:
           songs.length,
+
         songs
+
       });
 
     } catch (error) {
@@ -200,23 +204,29 @@ app.get(
       );
 
       res.status(500).json({
+
         success: false,
+
         count: 0,
+
         songs: [],
+
         error:
           error.message
+
       });
     }
   }
 );
 
-// --------------------------------------------------
+// ==================================================
 // CATEGORIES
-// --------------------------------------------------
+// ==================================================
 
 app.get(
   "/api/categories",
   (req, res) => {
+
     try {
 
       const songs =
@@ -233,25 +243,37 @@ app.get(
         ];
 
       res.json({
+
         success: true,
+
         categories
+
       });
 
     } catch (error) {
 
+      console.error(
+        "Category error:",
+        error
+      );
+
       res.status(500).json({
+
         success: false,
+
         categories: [],
+
         error:
           error.message
+
       });
     }
   }
 );
 
-// --------------------------------------------------
+// ==================================================
 // SEARCH
-// --------------------------------------------------
+// ==================================================
 
 app.get(
   "/api/search",
@@ -270,10 +292,14 @@ app.get(
     if (!query) {
 
       return res.json({
+
         success: true,
+
         count:
           songs.length,
+
         songs
+
       });
     }
 
@@ -281,44 +307,60 @@ app.get(
       songs.filter(song => {
 
         const text =
-          `${song.title} ${song.artist} ${song.album} ${song.category}`
+          [
+            song.title,
+            song.artist,
+            song.album,
+            song.category
+          ]
+            .join(" ")
             .toLowerCase();
 
         return text.includes(query);
       });
 
     res.json({
+
       success: true,
+
       count:
         results.length,
+
       songs:
         results
+
     });
   }
 );
 
-// --------------------------------------------------
+// ==================================================
 // API 404
-// --------------------------------------------------
+// ==================================================
 
 app.use(
   "/api",
   (req, res) => {
+
     res.status(404).json({
+
       success: false,
+
       error:
         "API endpoint not found"
+
     });
   }
 );
 
-// --------------------------------------------------
-// FRONTEND FALLBACK
-// --------------------------------------------------
+// ==================================================
+// FRONTEND
+// ==================================================
 
+// Explicit homepage route
 app.get(
-  "*",
+  "/",
   (req, res) => {
+
     const indexFile =
       path.join(
         ROOT,
@@ -328,10 +370,13 @@ app.get(
     if (
       fs.existsSync(indexFile)
     ) {
+
       res.sendFile(
         indexFile
       );
+
     } else {
+
       res
         .status(404)
         .send(
@@ -341,9 +386,66 @@ app.get(
   }
 );
 
-// --------------------------------------------------
-// START
-// --------------------------------------------------
+// ==================================================
+// FRONTEND FALLBACK
+// ==================================================
+
+// Express 5 compatible fallback.
+// No app.get("*") is used.
+
+app.use(
+  (req, res, next) => {
+
+    // Don't interfere with APIs
+    if (
+      req.path.startsWith("/api/")
+    ) {
+      return next();
+    }
+
+    const indexFile =
+      path.join(
+        ROOT,
+        "index.html"
+      );
+
+    if (
+      fs.existsSync(indexFile)
+    ) {
+
+      return res.sendFile(
+        indexFile
+      );
+    }
+
+    next();
+  }
+);
+
+// ==================================================
+// FINAL 404
+// ==================================================
+
+app.use(
+  (req, res) => {
+
+    res.status(404).json({
+
+      success: false,
+
+      error:
+        "Not found",
+
+      path:
+        req.originalUrl
+
+    });
+  }
+);
+
+// ==================================================
+// START SERVER
+// ==================================================
 
 app.listen(
   PORT,
@@ -358,7 +460,7 @@ app.listen(
     );
 
     console.log(
-      "SwarAJ Music Server"
+      "स्वरAJ Music Server"
     );
 
     console.log(
@@ -382,6 +484,7 @@ app.listen(
       console.log(
         `URL: ${song.url}`
       );
+
     });
 
     console.log(
