@@ -9,10 +9,11 @@ const ROOT = __dirname;
 
 const SONGS_DIR = path.join(ROOT, "songs");
 const IMAGES_DIR = path.join(ROOT, "images");
+const INDEX_FILE = path.join(ROOT, "index.html");
 
-// --------------------------------------------------
-// CREATE DIRECTORIES
-// --------------------------------------------------
+// ============================================================
+// CREATE REQUIRED DIRECTORIES
+// ============================================================
 
 if (!fs.existsSync(SONGS_DIR)) {
     fs.mkdirSync(SONGS_DIR, { recursive: true });
@@ -22,200 +23,263 @@ if (!fs.existsSync(IMAGES_DIR)) {
     fs.mkdirSync(IMAGES_DIR, { recursive: true });
 }
 
-// --------------------------------------------------
+// ============================================================
 // MIDDLEWARE
-// --------------------------------------------------
+// ============================================================
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// --------------------------------------------------
+// ============================================================
 // STATIC FILES
-// --------------------------------------------------
+// ============================================================
 
-app.use(express.static(ROOT));
+// Frontend files
+app.use(express.static(ROOT, {
+    index: false,
+    maxAge: "1h"
+}));
 
+// Songs
 app.use(
     "/songs",
     express.static(SONGS_DIR, {
-        fallthrough: true,
-        setHeaders: (res) => {
-            res.setHeader("Accept-Ranges", "bytes");
-            res.setHeader("Cache-Control", "public, max-age=3600");
-        }
+        maxAge: "1h",
+        acceptRanges: true
     })
 );
 
-app.use("/images", express.static(IMAGES_DIR));
+// Images
+app.use(
+    "/images",
+    express.static(IMAGES_DIR, {
+        maxAge: "1h"
+    })
+);
 
-// --------------------------------------------------
+// ============================================================
 // HELPERS
-// --------------------------------------------------
+// ============================================================
 
 const AUDIO_EXTENSIONS = new Set([
     ".mp3",
     ".m4a",
-    ".aac",
     ".wav",
     ".ogg",
-    ".oga",
+    ".aac",
     ".flac",
-    ".opus"
+    ".webm"
 ]);
 
-function cleanTitle(filename) {
-    return filename
+const IMAGE_EXTENSIONS = new Set([
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".gif"
+]);
+
+function cleanName(name) {
+    return name
         .replace(/\.[^/.]+$/, "")
         .replace(/[_-]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
 }
 
-function encodeSongPath(relativePath) {
-    return (
-        "/songs/" +
-        relativePath
-            .split(path.sep)
-            .map(part => encodeURIComponent(part))
-            .join("/")
-    );
+function encodePath(filePath) {
+    return filePath
+        .split(path.sep)
+        .map(part => encodeURIComponent(part))
+        .join("/");
 }
 
-function encodeImagePath(relativePath) {
-    return (
-        "/images/" +
-        relativePath
-            .split(path.sep)
-            .map(part => encodeURIComponent(part))
-            .join("/")
-    );
-}
+function getImageForCategory(category) {
+    const possibleNames = [
+        category,
+        category.toLowerCase(),
+        category.replace(/\s+/g, "-"),
+        category.replace(/\s+/g, "_")
+    ];
 
-// --------------------------------------------------
-// SONG SCANNER
-// --------------------------------------------------
+    for (const name of possibleNames) {
+        for (const ext of IMAGE_EXTENSIONS) {
+            const file = path.join(IMAGES_DIR, name + ext);
 
-function scanSongs() {
-    const songs = [];
-
-    if (!fs.existsSync(SONGS_DIR)) {
-        return songs;
+            if (fs.existsSync(file)) {
+                return `/images/${encodeURIComponent(name + ext)}`;
+            }
+        }
     }
 
-    function walk(currentDir, relativeDir = "") {
-        let entries = [];
+    // Common fallback images
+    const fallbackNames = [
+        "default",
+        "cover",
+        "music",
+        "album",
+        "ganpati"
+    ];
+
+    for (const name of fallbackNames) {
+        for (const ext of IMAGE_EXTENSIONS) {
+            const file = path.join(IMAGES_DIR, name + ext);
+
+            if (fs.existsSync(file)) {
+                return `/images/${encodeURIComponent(name + ext)}`;
+            }
+        }
+    }
+
+    return null;
+}
+
+function getAudioFiles(dir, relativeDir = "") {
+    let results = [];
+
+    if (!fs.existsSync(dir)) {
+        return results;
+    }
+
+    let entries;
+
+    try {
+        entries = fs.readdirSync(dir, {
+            withFileTypes: true
+        });
+    } catch (error) {
+        console.error("Unable to read directory:", dir, error);
+        return results;
+    }
+
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = path.join(relativeDir, entry.name);
+
+        if (entry.isDirectory()) {
+            results = results.concat(
+                getAudioFiles(fullPath, relativePath)
+            );
+            continue;
+        }
+
+        const ext = path.extname(entry.name).toLowerCase();
+
+        if (!AUDIO_EXTENSIONS.has(ext)) {
+            continue;
+        }
+
+        const relativeFile = relativePath.split(path.sep).join("/");
+
+        const parts = relativeFile.split("/");
+
+        let category = "All Songs";
+
+        if (parts.length > 1) {
+            category = parts[0];
+        }
+
+        const title = cleanName(entry.name);
+
+        let stats = {};
 
         try {
-            entries = fs.readdirSync(currentDir, {
-                withFileTypes: true
-            });
-        } catch (error) {
-            console.error("Unable to read:", currentDir, error.message);
-            return;
+            stats = fs.statSync(fullPath);
+        } catch (_) {
+            stats = {};
         }
 
-        entries.sort((a, b) =>
-            a.name.localeCompare(b.name, undefined, {
-                numeric: true,
-                sensitivity: "base"
-            })
-        );
+        results.push({
+            id: Buffer.from(relativeFile).toString("base64url"),
 
-        for (const entry of entries) {
-            const absolutePath = path.join(currentDir, entry.name);
-            const relativePath = path.join(relativeDir, entry.name);
+            title,
 
-            if (entry.isDirectory()) {
-                walk(absolutePath, relativePath);
-                continue;
-            }
+            artist: "स्वरAJ",
 
-            const extension = path.extname(entry.name).toLowerCase();
+            album: category,
 
-            if (!AUDIO_EXTENSIONS.has(extension)) {
-                continue;
-            }
+            category,
 
-            const parts = relativePath.split(path.sep);
+            filename: entry.name,
 
-            let category = parts.length > 1 ? parts[0] : "All Songs";
+            duration: 0,
 
-            if (!category || category === ".") {
-                category = "All Songs";
-            }
+            size: stats.size || 0,
 
-            const title = cleanTitle(entry.name);
+            url: `/songs/${encodePath(relativeFile)}`,
 
-            // Look for a cover in the same folder.
-            const songFolder = path.dirname(absolutePath);
+            image: getImageForCategory(category),
 
-            const possibleCovers = [
-                "cover.jpg",
-                "cover.jpeg",
-                "cover.png",
-                "cover.webp",
-                "album.jpg",
-                "album.jpeg",
-                "album.png",
-                "album.webp"
-            ];
+            type: ext.replace(".", ""),
 
-            let cover = "/images/default-cover.svg";
-
-            for (const coverName of possibleCovers) {
-                const coverPath = path.join(songFolder, coverName);
-
-                if (fs.existsSync(coverPath)) {
-                    const coverRelative = path.relative(
-                        IMAGES_DIR,
-                        coverPath
-                    );
-
-                    // Only use /images when cover actually lives there.
-                    if (!coverRelative.startsWith("..")) {
-                        cover = encodeImagePath(coverRelative);
-                    }
-                    break;
-                }
-            }
-
-            songs.push({
-                id: `song-${songs.length + 1}`,
-                title,
-                artist: "स्वरAJ",
-                album: category,
-                category,
-                cover,
-                url: encodeSongPath(relativePath),
-                file: relativePath.split(path.sep).join("/")
-            });
-        }
+            path: relativeFile
+        });
     }
 
-    walk(SONGS_DIR);
+    return results;
+}
+
+function scanSongs() {
+    const songs = getAudioFiles(SONGS_DIR);
+
+    songs.sort((a, b) =>
+        a.title.localeCompare(
+            b.title,
+            undefined,
+            {
+                numeric: true,
+                sensitivity: "base"
+            }
+        )
+    );
 
     return songs;
 }
 
-// --------------------------------------------------
-// API: HEALTH
-// --------------------------------------------------
+function getCategories() {
+    const songs = scanSongs();
+
+    const categoryMap = new Map();
+
+    for (const song of songs) {
+        const category = song.category || "Other";
+
+        if (!categoryMap.has(category)) {
+            categoryMap.set(category, {
+                name: category,
+                count: 0,
+                image: getImageForCategory(category)
+            });
+        }
+
+        categoryMap.get(category).count++;
+    }
+
+    return Array.from(categoryMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+}
+
+// ============================================================
+// HEALTH CHECK
+// ============================================================
 
 app.get("/api/health", (req, res) => {
     const songs = scanSongs();
 
     res.json({
         status: "ok",
-        success: true,
-        songsDirectoryExists: fs.existsSync(SONGS_DIR),
-        songCount: songs.length,
-        songsDirectory: SONGS_DIR
+        message: "स्वरAJ Music Server is running",
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || "production",
+        songs: songs.length,
+        categories: getCategories().length
     });
 });
 
-// --------------------------------------------------
-// API: SONGS
-// --------------------------------------------------
+// ============================================================
+// SONG API
+// ============================================================
 
 app.get("/api/songs", (req, res) => {
     try {
@@ -227,49 +291,23 @@ app.get("/api/songs", (req, res) => {
             songs
         });
     } catch (error) {
-        console.error("Song scan error:", error);
+        console.error("Songs API error:", error);
 
         res.status(500).json({
             success: false,
-            count: 0,
-            songs: [],
-            error: "Unable to scan songs"
+            error: "Unable to load songs",
+            songs: []
         });
     }
 });
 
-// --------------------------------------------------
-// API: CATEGORIES
-// --------------------------------------------------
+// ============================================================
+// CATEGORY API
+// ============================================================
 
 app.get("/api/categories", (req, res) => {
     try {
-        const songs = scanSongs();
-
-        const categoryMap = new Map();
-
-        songs.forEach(song => {
-            const category = song.category || "All Songs";
-
-            if (!categoryMap.has(category)) {
-                categoryMap.set(category, {
-                    name: category,
-                    count: 0,
-                    cover: song.cover
-                });
-            }
-
-            categoryMap.get(category).count++;
-        });
-
-        const categories = [
-            {
-                name: "All Songs",
-                count: songs.length,
-                cover: "/images/default-cover.svg"
-            },
-            ...Array.from(categoryMap.values())
-        ];
+        const categories = getCategories();
 
         res.json({
             success: true,
@@ -277,243 +315,257 @@ app.get("/api/categories", (req, res) => {
             categories
         });
     } catch (error) {
-        console.error("Category error:", error);
+        console.error("Categories API error:", error);
 
         res.status(500).json({
             success: false,
+            error: "Unable to load categories",
             categories: []
         });
     }
 });
 
-// --------------------------------------------------
-// API: YOUTUBE SEARCH
-// --------------------------------------------------
+// ============================================================
+// SONGS BY CATEGORY
+// ============================================================
 
-app.get("/api/youtube/search", async (req, res) => {
+app.get("/api/categories/:category/songs", (req, res) => {
     try {
-        const query = String(req.query.q || "").trim();
-
-        if (!query) {
-            return res.status(400).json({
-                success: false,
-                error: "Search query is required"
-            });
-        }
-
-        const apiKey = process.env.YOUTUBE_API_KEY;
-
-        if (!apiKey) {
-            return res.status(503).json({
-                success: false,
-                error:
-                    "YouTube API is not configured. Add YOUTUBE_API_KEY in Render Environment Variables."
-            });
-        }
-
-        const params = new URLSearchParams({
-            part: "snippet",
-            type: "video",
-            q: query,
-            maxResults: "15",
-            regionCode: "IN",
-            videoEmbeddable: "true",
-            videoSyndicated: "true",
-            safeSearch: "moderate",
-            relevanceLanguage: "en",
-            key: apiKey
-        });
-
-        const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?${params.toString()}`
+        const requestedCategory = decodeURIComponent(
+            req.params.category
         );
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error("YouTube API error:", data);
-
-            return res.status(response.status).json({
-                success: false,
-                error:
-                    data?.error?.message ||
-                    "YouTube API request failed"
-            });
-        }
-
-        const results = (data.items || [])
-            .filter(item => item?.id?.videoId)
-            .map(item => ({
-                id: item.id.videoId,
-                title:
-                    item.snippet?.title ||
-                    "YouTube Music",
-                artist:
-                    item.snippet?.channelTitle ||
-                    "YouTube",
-                channel:
-                    item.snippet?.channelTitle ||
-                    "YouTube",
-                description:
-                    item.snippet?.description ||
-                    "",
-                thumbnail:
-                    item.snippet?.thumbnails?.high?.url ||
-                    item.snippet?.thumbnails?.medium?.url ||
-                    item.snippet?.thumbnails?.default?.url ||
-                    "",
-                publishedAt:
-                    item.snippet?.publishedAt ||
-                    "",
-                url:
-                    `https://www.youtube.com/watch?v=${item.id.videoId}`,
-                embedUrl:
-                    `https://www.youtube.com/embed/${item.id.videoId}?autoplay=1&rel=0`
-            }));
+        const songs = scanSongs().filter(song =>
+            song.category.toLowerCase() ===
+            requestedCategory.toLowerCase()
+        );
 
         res.json({
             success: true,
-            count: results.length,
-            results
+            category: requestedCategory,
+            count: songs.length,
+            songs
         });
     } catch (error) {
-        console.error("YouTube search exception:", error);
+        console.error("Category songs API error:", error);
 
         res.status(500).json({
             success: false,
-            error: "YouTube search failed"
+            error: "Unable to load category songs",
+            songs: []
         });
     }
 });
 
-// --------------------------------------------------
-// API: YOUTUBE VIDEO
-// --------------------------------------------------
+// ============================================================
+// SEARCH API
+// ============================================================
 
-app.get("/api/youtube/video/:id", (req, res) => {
-    const id = String(req.params.id || "").trim();
+app.get("/api/search", (req, res) => {
+    try {
+        const query = String(req.query.q || "")
+            .trim()
+            .toLowerCase();
 
-    if (!/^[a-zA-Z0-9_-]{6,20}$/.test(id)) {
-        return res.status(400).json({
-            success: false,
-            error: "Invalid YouTube video ID"
-        });
-    }
-
-    res.json({
-        success: true,
-        id,
-        url: `https://www.youtube.com/watch?v=${id}`,
-        embedUrl:
-            `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`
-    });
-});
-
-// --------------------------------------------------
-// FIREBASE CONFIG
-// --------------------------------------------------
-// Optional.
-// Set these Render environment variables if you want
-// Firebase-ready client configuration.
-
-app.get("/api/config", (req, res) => {
-    res.json({
-        success: true,
-
-        firebase: {
-            apiKey: process.env.FIREBASE_API_KEY || "",
-            authDomain: process.env.FIREBASE_AUTH_DOMAIN || "",
-            projectId: process.env.FIREBASE_PROJECT_ID || "",
-            storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
-            messagingSenderId:
-                process.env.FIREBASE_MESSAGING_SENDER_ID || "",
-            appId: process.env.FIREBASE_APP_ID || ""
-        },
-
-        features: {
-            youtube: Boolean(process.env.YOUTUBE_API_KEY),
-            firebase: Boolean(
-                process.env.FIREBASE_API_KEY &&
-                process.env.FIREBASE_PROJECT_ID &&
-                process.env.FIREBASE_APP_ID
-            ),
-            jiohotstar: true
+        if (!query) {
+            return res.json({
+                success: true,
+                count: 0,
+                songs: []
+            });
         }
-    });
+
+        const songs = scanSongs();
+
+        const results = songs.filter(song => {
+            const searchableText = [
+                song.title,
+                song.artist,
+                song.album,
+                song.category,
+                song.filename
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            return searchableText.includes(query);
+        });
+
+        res.json({
+            success: true,
+            query,
+            count: results.length,
+            songs: results
+        });
+    } catch (error) {
+        console.error("Search API error:", error);
+
+        res.status(500).json({
+            success: false,
+            error: "Search failed",
+            songs: []
+        });
+    }
 });
 
-// --------------------------------------------------
-// JIOHOTSTAR INFO
-// --------------------------------------------------
+// ============================================================
+// LIBRARY API
+// ============================================================
 
-app.get("/api/jiohotstar", (req, res) => {
+app.get("/api/library", (req, res) => {
+    try {
+        const songs = scanSongs();
+        const categories = getCategories();
+
+        res.json({
+            success: true,
+
+            library: {
+                totalSongs: songs.length,
+                totalCategories: categories.length,
+                categories,
+                songs
+            }
+        });
+    } catch (error) {
+        console.error("Library API error:", error);
+
+        res.status(500).json({
+            success: false,
+            error: "Unable to load music library"
+        });
+    }
+});
+
+// ============================================================
+// REFRESH / RESCAN
+// ============================================================
+
+app.get("/api/refresh", (req, res) => {
+    try {
+        const songs = scanSongs();
+
+        res.json({
+            success: true,
+            message: "Music library rescanned",
+            count: songs.length,
+            categories: getCategories().length,
+            songs
+        });
+    } catch (error) {
+        console.error("Refresh API error:", error);
+
+        res.status(500).json({
+            success: false,
+            error: "Unable to rescan music"
+        });
+    }
+});
+
+// ============================================================
+// DEBUG INFORMATION
+// ============================================================
+
+app.get("/api/debug", (req, res) => {
+    const songs = scanSongs();
+    const categories = getCategories();
+
     res.json({
-        success: true,
-        name: "JioHotstar",
-        url: "https://www.hotstar.com/in",
-        message:
-            "JioHotstar is available through its official website. Playback availability and embedding are controlled by the service."
+        server: "स्वरAJ",
+        node: process.version,
+        platform: process.platform,
+        root: ROOT,
+        songsDirectory: SONGS_DIR,
+        imagesDirectory: IMAGES_DIR,
+        songsDirectoryExists: fs.existsSync(SONGS_DIR),
+        imagesDirectoryExists: fs.existsSync(IMAGES_DIR),
+        indexExists: fs.existsSync(INDEX_FILE),
+        totalSongs: songs.length,
+        totalCategories: categories.length,
+        categories: categories.map(category => ({
+            name: category.name,
+            count: category.count
+        }))
     });
 });
 
-// --------------------------------------------------
-// SPA FALLBACK
-// --------------------------------------------------
+// ============================================================
+// FAVICON
+// ============================================================
 
-app.get("*", (req, res, next) => {
-    if (
-        req.path.startsWith("/api/") ||
-        req.path.startsWith("/songs/") ||
-        req.path.startsWith("/images/")
-    ) {
-        return next();
+app.get("/favicon.ico", (req, res) => {
+    const faviconCandidates = [
+        path.join(IMAGES_DIR, "favicon.ico"),
+        path.join(ROOT, "favicon.ico")
+    ];
+
+    const favicon = faviconCandidates.find(file =>
+        fs.existsSync(file)
+    );
+
+    if (favicon) {
+        return res.sendFile(favicon);
     }
 
-    const indexPath = path.join(ROOT, "index.html");
-
-    if (fs.existsSync(indexPath)) {
-        return res.sendFile(indexPath);
-    }
-
-    res.status(404).send("index.html not found");
+    res.status(204).end();
 });
 
-// --------------------------------------------------
+// ============================================================
+// FRONTEND
+// IMPORTANT:
+// Express 5 DOES NOT support app.get("*")
+// Use "/{*splat}" instead.
+// ============================================================
+
+app.get("/{*splat}", (req, res) => {
+    // Never allow API requests to fall through to index.html
+    if (req.path.startsWith("/api/")) {
+        return res.status(404).json({
+            success: false,
+            error: "API endpoint not found"
+        });
+    }
+
+    if (!fs.existsSync(INDEX_FILE)) {
+        return res.status(500).send(`
+            <h1>स्वरAJ Server Error</h1>
+            <p>index.html was not found.</p>
+        `);
+    }
+
+    res.sendFile(INDEX_FILE);
+});
+
+// ============================================================
+// ERROR HANDLER
+// ============================================================
+
+app.use((err, req, res, next) => {
+    console.error("Server error:", err);
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    res.status(500).json({
+        success: false,
+        error: "Internal server error"
+    });
+});
+
+// ============================================================
 // START SERVER
-// --------------------------------------------------
+// ============================================================
 
 app.listen(PORT, "0.0.0.0", () => {
-    const songs = scanSongs();
-
-    console.log("=================================");
-    console.log("स्वरAJ Music Server");
-    console.log(`Port: ${PORT}`);
-    console.log(`Songs directory: ${SONGS_DIR}`);
-    console.log(`Songs found: ${songs.length}`);
-
-    songs.forEach(song => {
-        console.log(`[${song.category}] ${song.title}`);
-        console.log(`URL: ${song.url}`);
-    });
-
-    console.log("---------------------------------");
-    console.log(
-        `YouTube API: ${
-            process.env.YOUTUBE_API_KEY
-                ? "CONFIGURED"
-                : "NOT CONFIGURED"
-        }`
-    );
-
-    console.log(
-        `Firebase: ${
-            process.env.FIREBASE_API_KEY &&
-            process.env.FIREBASE_PROJECT_ID &&
-            process.env.FIREBASE_APP_ID
-                ? "CONFIGURED"
-                : "READY / NOT CONFIGURED"
-        }`
-    );
-
-    console.log("=================================");
+    console.log("==============================================");
+    console.log("🎵 स्वरAJ Music Server");
+    console.log("==============================================");
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📁 Root: ${ROOT}`);
+    console.log(`🎵 Songs: ${SONGS_DIR}`);
+    console.log(`🖼️ Images: ${IMAGES_DIR}`);
+    console.log(`🎧 Songs found: ${scanSongs().length}`);
+    console.log(`📂 Categories: ${getCategories().length}`);
+    console.log("==============================================");
 });
