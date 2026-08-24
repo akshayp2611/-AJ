@@ -1,1504 +1,1614 @@
-"use strict";
+/* ==================================================
+   स्वरAJ MUSIC PLAYER
+   Local songs only
+================================================== */
 
-// ==================================================
-// ELEMENTS
-// ==================================================
+(() => {
+    "use strict";
 
-const audio =
-  document.getElementById("audio");
+    /* ==================================================
+       STATE
+    ================================================== */
 
-const songsGrid =
-  document.getElementById("songsGrid");
+    const state = {
+        songs: [],
+        filteredSongs: [],
 
-const categoriesGrid =
-  document.getElementById(
-    "categoriesGrid"
-  );
+        activeCategory: "All Songs",
 
-const sidebarCategories =
-  document.getElementById(
-    "sidebarCategories"
-  );
+        currentIndex: -1,
+        currentSong: null,
 
-const songsHeading =
-  document.getElementById(
-    "songsHeading"
-  );
+        isPlaying: false,
+        isShuffle: false,
+        isRepeat: false,
+        isMuted: false,
 
-const songCount =
-  document.getElementById(
-    "songCount"
-  );
+        volume: 0.8
+    };
 
-const emptyState =
-  document.getElementById(
-    "emptyState"
-  );
+    /* ==================================================
+       DOM
+    ================================================== */
 
-const searchInput =
-  document.getElementById(
-    "searchInput"
-  );
+    const $ = (selector) =>
+        document.querySelector(selector);
 
-const clearSearch =
-  document.getElementById(
-    "clearSearch"
-  );
+    const audio = $("#audio");
 
-const refreshButton =
-  document.getElementById(
-    "refreshButton"
-  );
+    const sidebar = $("#sidebar");
+    const menuButton = $("#menuButton");
+    const sidebarClose = $("#sidebarClose");
+    const mobileOverlay = $("#mobileOverlay");
 
-const menuButton =
-  document.getElementById(
-    "menuButton"
-  );
+    const searchInput = $("#searchInput");
+    const clearSearch = $("#clearSearch");
 
-const closeMenu =
-  document.getElementById(
-    "closeMenu"
-  );
+    const categoryList = $("#categoryList");
+    const categoryCards = $("#categoryCards");
 
-const sidebar =
-  document.getElementById(
-    "sidebar"
-  );
+    const songGrid = $("#songGrid");
 
-const sidebarOverlay =
-  document.getElementById(
-    "sidebarOverlay"
-  );
+    const songsTitle = $("#songsTitle");
+    const activeCategoryLabel =
+        $("#activeCategoryLabel");
 
-const playButton =
-  document.getElementById(
-    "playButton"
-  );
+    const visibleSongCount =
+        $("#visibleSongCount");
 
-const previousButton =
-  document.getElementById(
-    "previousButton"
-  );
+    const allSongCount =
+        $("#allSongCount");
 
-const nextButton =
-  document.getElementById(
-    "nextButton"
-  );
+    const playerTitle =
+        $("#playerTitle");
 
-const shuffleButton =
-  document.getElementById(
-    "shuffleButton"
-  );
+    const playerArtist =
+        $("#playerArtist");
 
-const repeatButton =
-  document.getElementById(
-    "repeatButton"
-  );
+    const playerCover =
+        $("#playerCover");
 
-const progress =
-  document.getElementById(
-    "progress"
-  );
+    const playButton =
+        $("#playButton");
 
-const currentTime =
-  document.getElementById(
-    "currentTime"
-  );
+    const heroPlay =
+        $("#heroPlay");
 
-const duration =
-  document.getElementById(
-    "duration"
-  );
+    const previousButton =
+        $("#previousButton");
 
-const volume =
-  document.getElementById(
-    "volume"
-  );
+    const nextButton =
+        $("#nextButton");
 
-const playerTitle =
-  document.getElementById(
-    "playerTitle"
-  );
+    const shuffleButton =
+        $("#shuffleButton");
 
-const playerArtist =
-  document.getElementById(
-    "playerArtist"
-  );
+    const shufflePlayer =
+        $("#shufflePlayer");
 
-const playerCover =
-  document.getElementById(
-    "playerCover"
-  );
+    const repeatButton =
+        $("#repeatButton");
 
-const likeButton =
-  document.getElementById(
-    "likeButton"
-  );
+    const muteButton =
+        $("#muteButton");
 
-const heroPlay =
-  document.getElementById(
-    "heroPlay"
-  );
+    const volumeSlider =
+        $("#volumeSlider");
 
-const showAllCategories =
-  document.getElementById(
-    "showAllCategories"
-  );
+    const currentTime =
+        $("#currentTime");
 
-// ==================================================
-// STATE
-// ==================================================
+    const duration =
+        $("#duration");
 
-let songs = [];
+    const progressTrack =
+        $("#progressTrack");
 
-let filteredSongs = [];
+    const progressLiquid =
+        $("#progressLiquid");
 
-let currentIndex = -1;
+    const likeButton =
+        $("#likeButton");
 
-let activeCategory =
-  "All Songs";
+    /* ==================================================
+       INIT
+    ================================================== */
 
-let isShuffle = false;
-
-let isRepeat = false;
-
-let favorites =
-  JSON.parse(
-    localStorage.getItem(
-      "swarajFavorites"
-    ) || "[]"
-  );
-
-// ==================================================
-// INITIALIZE
-// ==================================================
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    volume.value = 0.8;
-
-    audio.volume = 0.8;
-
-    loadSongs();
-
-    setupMenu();
-
-    setupSearch();
-
-    setupPlayer();
-
-    setupNavigation();
-
-  }
-);
-
-// ==================================================
-// LOAD SONGS
-// ==================================================
-
-async function loadSongs() {
-
-  showLoading();
-
-  try {
-
-    const response =
-      await fetch(
-        "/api/songs",
-        {
-          cache: "no-store"
-        }
-      );
-
-    if (!response.ok) {
-      throw new Error(
-        `HTTP ${response.status}`
-      );
-    }
-
-    const data =
-      await response.json();
-
-    if (
-      !data ||
-      !Array.isArray(
-        data.songs
-      )
-    ) {
-      throw new Error(
-        "Invalid songs response"
-      );
-    }
-
-    songs =
-      data.songs;
-
-    filteredSongs =
-      [...songs];
-
-    renderCategories();
-
-    renderSongs();
-
-  } catch (error) {
-
-    console.error(
-      "Unable to load songs:",
-      error
+    document.addEventListener(
+        "DOMContentLoaded",
+        init
     );
 
-    songs = [];
+    async function init() {
 
-    filteredSongs = [];
+        setupMenu();
 
-    songsGrid.innerHTML = `
-      <div class="loading">
-        Unable to load songs.
-        <br>
-        <small>${escapeHtml(
-          error.message
-        )}</small>
-      </div>
-    `;
+        setupNavigation();
 
-    songCount.textContent =
-      "0 songs";
-  }
-}
+        setupSearch();
 
-// ==================================================
-// CATEGORIES
-// ==================================================
+        setupPlayerControls();
 
-function getCategories() {
+        setupAudio();
 
-  const unique =
-    [
-      ...new Set(
-        songs
-          .map(
-            song =>
-              song.category
-          )
-          .filter(Boolean)
-      )
-    ];
+        setupKeyboard();
 
-  return unique;
-}
+        setupTouch();
 
-function renderCategories() {
+        updateVolume();
 
-  const categories =
-    getCategories();
-
-  // Sidebar
-  sidebarCategories.innerHTML = `
-    <button
-      class="category-button ${
-        activeCategory === "All Songs"
-          ? "active"
-          : ""
-      }"
-      data-category="All Songs"
-    >
-      <span>◉</span>
-      All Songs
-    </button>
-  `;
-
-  categories.forEach(
-    category => {
-
-      sidebarCategories.innerHTML += `
-        <button
-          class="category-button ${
-            activeCategory === category
-              ? "active"
-              : ""
-          }"
-          data-category="${escapeAttr(
-            category
-          )}"
-        >
-          <span>♪</span>
-          ${escapeHtml(category)}
-        </button>
-      `;
+        await loadSongs();
     }
-  );
 
-  // Main categories
-  categoriesGrid.innerHTML = "";
+    /* ==================================================
+       MENU
+    ================================================== */
 
-  if (!categories.length) {
+    function setupMenu() {
 
-    categoriesGrid.innerHTML = `
-      <div class="loading">
-        No categories found.
-      </div>
-    `;
-
-    return;
-  }
-
-  categories.forEach(
-    (category, index) => {
-
-      const count =
-        songs.filter(
-          song =>
-            song.category ===
-            category
-        ).length;
-
-      const icons = [
-        "♫",
-        "◉",
-        "✦",
-        "♪",
-        "♬",
-        "◈"
-      ];
-
-      const card =
-        document.createElement(
-          "div"
+        menuButton.addEventListener(
+            "click",
+            toggleMenu
         );
 
-      card.className =
-        "category-card";
+        sidebarClose.addEventListener(
+            "click",
+            closeMenu
+        );
 
-      card.dataset.category =
-        category;
+        mobileOverlay.addEventListener(
+            "click",
+            closeMenu
+        );
 
-      card.innerHTML = `
-        <div class="category-icon">
-          ${
-            icons[
-              index %
-              icons.length
-            ]
-          }
-        </div>
+        document.addEventListener(
+            "keydown",
+            (event) => {
 
-        <h3>
-          ${escapeHtml(category)}
-        </h3>
-
-        <p>
-          ${count}
-          ${
-            count === 1
-              ? "song"
-              : "songs"
-          }
-        </p>
-      `;
-
-      card.addEventListener(
-        "click",
-        () => {
-          selectCategory(
-            category
-          );
-        }
-      );
-
-      categoriesGrid.appendChild(
-        card
-      );
+                if (
+                    event.key === "Escape"
+                ) {
+                    closeMenu();
+                }
+            }
+        );
     }
-  );
 
-  // Sidebar events
-  sidebarCategories
-    .querySelectorAll(
-      ".category-button"
-    )
-    .forEach(button => {
+    function toggleMenu() {
 
-      button.addEventListener(
-        "click",
-        () => {
+        const isOpen =
+            sidebar.classList.contains("open");
 
-          selectCategory(
-            button.dataset.category
-          );
-
-          closeSidebar();
+        if (isOpen) {
+            closeMenu();
+        } else {
+            openMenu();
         }
-      );
-    });
-}
+    }
 
-// ==================================================
-// CATEGORY FILTER
-// ==================================================
+    function openMenu() {
 
-function selectCategory(
-  category
-) {
+        sidebar.classList.add("open");
 
-  activeCategory =
-    category;
+        mobileOverlay.classList.add("active");
 
-  if (
-    category === "All Songs"
-  ) {
+        menuButton.classList.add("active");
 
-    filteredSongs =
-      [...songs];
-
-  } else {
-
-    filteredSongs =
-      songs.filter(
-        song =>
-          song.category ===
-          category
-      );
-  }
-
-  songsHeading.textContent =
-    category;
-
-  renderCategories();
-
-  renderSongs();
-}
-
-// ==================================================
-// RENDER SONGS
-// ==================================================
-
-function renderSongs() {
-
-  songsGrid.innerHTML = "";
-
-  if (
-    !filteredSongs.length
-  ) {
-
-    emptyState.classList.remove(
-      "hidden"
-    );
-
-    songCount.textContent =
-      "0 songs";
-
-    return;
-  }
-
-  emptyState.classList.add(
-    "hidden"
-  );
-
-  songCount.textContent =
-    `${filteredSongs.length} ${
-      filteredSongs.length === 1
-        ? "song"
-        : "songs"
-    }`;
-
-  filteredSongs.forEach(
-    (song, index) => {
-
-      const card =
-        document.createElement(
-          "article"
+        menuButton.setAttribute(
+            "aria-expanded",
+            "true"
         );
 
-      card.className =
-        "song-card";
-
-      if (
-        currentIndex !== -1 &&
-        songs[currentIndex] &&
-        songs[currentIndex].id ===
-          song.id
-      ) {
-        card.classList.add(
-          "playing"
+        mobileOverlay.setAttribute(
+            "aria-hidden",
+            "false"
         );
-      }
 
-      card.innerHTML = `
-        <div class="song-cover">
+        document.body.style.overflow =
+            "hidden";
+    }
 
-          ${
-            song.cover
-              ? `
-                <img
-                  src="${escapeAttr(
-                    song.cover
-                  )}"
-                  alt="${escapeAttr(
-                    song.title
-                  )}"
-                  loading="lazy"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                >
-              `
-              : ""
-          }
+    function closeMenu() {
 
-          <div
-            class="song-cover-placeholder"
-            style="${
-              song.cover
-                ? "display:none"
-                : ""
-            }"
-          >
-            ♪
-          </div>
+        sidebar.classList.remove("open");
 
-          <button
-            class="song-play"
-            aria-label="Play ${escapeAttr(
-              song.title
-            )}"
-          >
-            ▶
-          </button>
+        mobileOverlay.classList.remove(
+            "active"
+        );
 
-        </div>
+        menuButton.classList.remove("active");
 
-        <div class="song-info">
+        menuButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
 
-          <h3>
-            ${escapeHtml(
-              song.title
-            )}
-          </h3>
+        mobileOverlay.setAttribute(
+            "aria-hidden",
+            "true"
+        );
 
-          <p>
-            ${escapeHtml(
-              song.artist ||
-                "स्वरAJ"
-            )}
-          </p>
+        document.body.style.overflow = "";
+    }
 
-        </div>
-      `;
+    /* ==================================================
+       NAVIGATION
+    ================================================== */
 
-      card.addEventListener(
-        "click",
-        event => {
+    function setupNavigation() {
 
-          if (
-            event.target.closest(
-              ".song-play"
+        document
+            .querySelectorAll(".nav-item")
+            .forEach((button) => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        document
+                            .querySelectorAll(
+                                ".nav-item"
+                            )
+                            .forEach((item) =>
+                                item.classList.remove(
+                                    "active"
+                                )
+                            );
+
+                        button.classList.add(
+                            "active"
+                        );
+
+                        const view =
+                            button.dataset.view;
+
+                        if (view === "home") {
+
+                            window.scrollTo({
+                                top: 0,
+                                behavior: "smooth"
+                            });
+
+                        } else if (
+                            view === "search"
+                        ) {
+
+                            searchInput.focus();
+
+                        } else if (
+                            view === "library"
+                        ) {
+
+                            setCategory(
+                                "All Songs"
+                            );
+                        }
+
+                        if (
+                            window.innerWidth <= 800
+                        ) {
+                            closeMenu();
+                        }
+                    }
+                );
+            });
+    }
+
+    /* ==================================================
+       SONG API
+    ================================================== */
+
+    async function loadSongs() {
+
+        showLoading();
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/songs",
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+            }
+
+            const data =
+                await response.json();
+
+            if (
+                !data ||
+                !Array.isArray(data.songs)
+            ) {
+                throw new Error(
+                    "Invalid song response"
+                );
+            }
+
+            state.songs =
+                normalizeSongs(data.songs);
+
+            state.filteredSongs =
+                [...state.songs];
+
+            allSongCount.textContent =
+                state.songs.length;
+
+            renderCategories();
+
+            renderSongs();
+
+        } catch (error) {
+
+            console.error(
+                "Unable to load songs:",
+                error
+            );
+
+            showError(
+                "Unable to load songs",
+                "Check that your server is running and your songs folder contains supported audio files."
+            );
+        }
+    }
+
+    /* ==================================================
+       NORMALIZE
+    ================================================== */
+
+    function normalizeSongs(songs) {
+
+        return songs.map(
+            (song, index) => ({
+
+                id:
+                    song.id ||
+                    `song-${index}`,
+
+                title:
+                    song.title ||
+                    song.name ||
+                    "Unknown Song",
+
+                artist:
+                    song.artist ||
+                    song.category ||
+                    "स्वरAJ",
+
+                category:
+                    song.category ||
+                    "All Songs",
+
+                url:
+                    song.url ||
+                    song.path ||
+                    "",
+
+                image:
+                    song.image ||
+                    "/images/default-cover.svg"
+            })
+        );
+    }
+
+    /* ==================================================
+       CATEGORIES
+    ================================================== */
+
+    function getCategories() {
+
+        const map =
+            new Map();
+
+        for (const song of state.songs) {
+
+            const category =
+                song.category ||
+                "Other";
+
+            map.set(
+                category,
+                (map.get(category) || 0) + 1
+            );
+        }
+
+        return Array.from(
+            map.entries()
+        )
+            .map(
+                ([name, count]) => ({
+                    name,
+                    count
+                })
             )
-          ) {
-            playSongFromFilteredIndex(
-              index
+            .sort(
+                (a, b) =>
+                    a.name.localeCompare(
+                        b.name
+                    )
+            );
+    }
+
+    function renderCategories() {
+
+        const categories =
+            getCategories();
+
+        /* Sidebar */
+
+        categoryList.innerHTML = "";
+
+        const allButton =
+            createCategoryButton(
+                "All Songs",
+                state.songs.length,
+                true
+            );
+
+        categoryList.appendChild(
+            allButton
+        );
+
+        categories.forEach(
+            (category) => {
+
+                categoryList.appendChild(
+                    createCategoryButton(
+                        category.name,
+                        category.count,
+                        false
+                    )
+                );
+            }
+        );
+
+        /* Cards */
+
+        categoryCards.innerHTML = "";
+
+        if (!categories.length) {
+
+            categoryCards.innerHTML = `
+                <div class="loading-card">
+                    No categories found.
+                </div>
+            `;
+
+            return;
+        }
+
+        categories.forEach(
+            (category, index) => {
+
+                const card =
+                    document.createElement(
+                        "button"
+                    );
+
+                card.type = "button";
+
+                card.className =
+                    "category-card";
+
+                card.innerHTML = `
+                    <div class="category-card-icon">
+                        ${getCategoryIcon(index)}
+                    </div>
+
+                    <div class="category-card-title">
+                        ${escapeHtml(category.name)}
+                    </div>
+
+                    <span class="category-card-count">
+                        ${category.count} song${category.count === 1 ? "" : "s"}
+                    </span>
+                `;
+
+                card.addEventListener(
+                    "click",
+                    () =>
+                        setCategory(
+                            category.name
+                        )
+                );
+
+                categoryCards.appendChild(
+                    card
+                );
+            }
+        );
+    }
+
+    function createCategoryButton(
+        name,
+        count,
+        active
+    ) {
+
+        const button =
+            document.createElement(
+                "button"
+            );
+
+        button.type = "button";
+
+        button.className =
+            "category-item";
+
+        if (active) {
+            button.classList.add(
+                "active"
+            );
+        }
+
+        button.dataset.category =
+            name;
+
+        button.innerHTML = `
+            <span class="category-symbol">
+                ${getCategoryIcon(
+                    name.length
+                )}
+            </span>
+
+            <span>
+                ${escapeHtml(name)}
+            </span>
+
+            <small>
+                ${count}
+            </small>
+        `;
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                setCategory(name);
+
+                if (
+                    window.innerWidth <= 800
+                ) {
+                    closeMenu();
+                }
+            }
+        );
+
+        return button;
+    }
+
+    function getCategoryIcon(index) {
+
+        const icons = [
+            "✦",
+            "◉",
+            "◆",
+            "♫",
+            "✧",
+            "◈",
+            "●",
+            "✺",
+            "❖"
+        ];
+
+        return icons[
+            Math.abs(index) %
+            icons.length
+        ];
+    }
+
+    function setCategory(category) {
+
+        state.activeCategory =
+            category;
+
+        document
+            .querySelectorAll(
+                ".category-item"
+            )
+            .forEach(
+                (button) => {
+
+                    button.classList.toggle(
+                        "active",
+                        button.dataset.category ===
+                            category
+                    );
+                }
+            );
+
+        songsTitle.textContent =
+            category;
+
+        activeCategoryLabel.textContent =
+            category === "All Songs"
+                ? "YOUR MUSIC"
+                : "CATEGORY";
+
+        applyFilters();
+    }
+
+    /* ==================================================
+       SEARCH
+    ================================================== */
+
+    function setupSearch() {
+
+        searchInput.addEventListener(
+            "input",
+            () => {
+
+                clearSearch.style.display =
+                    searchInput.value
+                        ? "block"
+                        : "none";
+
+                applyFilters();
+            }
+        );
+
+        clearSearch.addEventListener(
+            "click",
+            () => {
+
+                searchInput.value = "";
+
+                clearSearch.style.display =
+                    "none";
+
+                applyFilters();
+
+                searchInput.focus();
+            }
+        );
+
+        $("#showAllCategories")
+            .addEventListener(
+                "click",
+                () => {
+
+                    window.scrollTo({
+                        top:
+                            document
+                                .querySelector(
+                                    ".category-section"
+                                )
+                                .offsetTop - 80,
+                        behavior: "smooth"
+                    });
+                }
+            );
+    }
+
+    function applyFilters() {
+
+        const query =
+            searchInput.value
+                .trim()
+                .toLowerCase();
+
+        state.filteredSongs =
+            state.songs.filter(
+                (song) => {
+
+                    const categoryMatch =
+                        state.activeCategory ===
+                            "All Songs" ||
+                        song.category ===
+                            state.activeCategory;
+
+                    if (!categoryMatch) {
+                        return false;
+                    }
+
+                    if (!query) {
+                        return true;
+                    }
+
+                    return (
+                        song.title
+                            .toLowerCase()
+                            .includes(query) ||
+
+                        song.artist
+                            .toLowerCase()
+                            .includes(query) ||
+
+                        song.category
+                            .toLowerCase()
+                            .includes(query)
+                    );
+                }
+            );
+
+        renderSongs();
+    }
+
+    /* ==================================================
+       SONG RENDER
+    ================================================== */
+
+    function renderSongs() {
+
+        songGrid.innerHTML = "";
+
+        visibleSongCount.textContent =
+            state.filteredSongs.length;
+
+        if (!state.filteredSongs.length) {
+
+            songGrid.innerHTML = `
+                <div class="empty-state">
+
+                    <div class="empty-icon">
+                        ♪
+                    </div>
+
+                    <h3>
+                        No songs found
+                    </h3>
+
+                    <p>
+                        Add MP3/audio files to your
+                        songs folder or change your search.
+                    </p>
+
+                </div>
+            `;
+
+            return;
+        }
+
+        state.filteredSongs.forEach(
+            (song, index) => {
+
+                const card =
+                    document.createElement(
+                        "article"
+                    );
+
+                card.className =
+                    "song-card";
+
+                if (
+                    state.currentSong &&
+                    state.currentSong.id ===
+                        song.id
+                ) {
+                    card.classList.add(
+                        "playing"
+                    );
+                }
+
+                card.innerHTML = `
+                    <div class="song-cover">
+
+                        <img
+                            src="${escapeAttribute(song.image)}"
+                            alt=""
+                            loading="lazy"
+                            onerror="this.style.display='none'"
+                        >
+
+                        <button
+                            class="song-play liquid-button"
+                            type="button"
+                            aria-label="Play ${escapeAttribute(song.title)}"
+                        >
+                            ▶
+                        </button>
+
+                    </div>
+
+                    <div class="song-info">
+
+                        <span class="song-title">
+                            ${escapeHtml(song.title)}
+                        </span>
+
+                        <span class="song-artist">
+                            ${escapeHtml(song.artist)}
+                        </span>
+
+                    </div>
+
+                    <button
+                        class="song-menu"
+                        type="button"
+                        aria-label="Song options"
+                    >
+                        ⋮
+                    </button>
+                `;
+
+                const play =
+                    card.querySelector(
+                        ".song-play"
+                    );
+
+                play.addEventListener(
+                    "click",
+                    (event) => {
+
+                        event.stopPropagation();
+
+                        playSong(song);
+                    }
+                );
+
+                card.addEventListener(
+                    "click",
+                    () =>
+                        playSong(song)
+                );
+
+                songGrid.appendChild(
+                    card
+                );
+            }
+        );
+    }
+
+    /* ==================================================
+       PLAY SONG
+    ================================================== */
+
+    function playSong(song) {
+
+        if (!song || !song.url) {
+
+            console.error(
+                "Song URL missing:",
+                song
             );
 
             return;
-          }
-
-          playSongFromFilteredIndex(
-            index
-          );
         }
-      );
 
-      songsGrid.appendChild(
-        card
-      );
-    }
-  );
-}
+        state.currentSong =
+            song;
 
-// ==================================================
-// PLAY SONG
-// ==================================================
-
-function playSongFromFilteredIndex(
-  index
-) {
-
-  const song =
-    filteredSongs[index];
-
-  if (!song) {
-    return;
-  }
-
-  const globalIndex =
-    songs.findIndex(
-      item =>
-        item.id ===
-        song.id
-    );
-
-  if (
-    globalIndex === -1
-  ) {
-    return;
-  }
-
-  playSong(globalIndex);
-}
-
-function playSong(
-  index,
-  autoPlay = true
-) {
-
-  if (
-    index < 0 ||
-    index >= songs.length
-  ) {
-    return;
-  }
-
-  currentIndex =
-    index;
-
-  const song =
-    songs[currentIndex];
-
-  if (!song || !song.url) {
-    return;
-  }
-
-  audio.src =
-    song.url;
-
-  playerTitle.textContent =
-    song.title ||
-    "Unknown Song";
-
-  playerArtist.textContent =
-    song.artist ||
-    "स्वरAJ";
-
-  if (song.cover) {
-
-    playerCover.innerHTML = `
-      <img
-        src="${escapeAttr(
-          song.cover
-        )}"
-        alt=""
-        style="
-          width:100%;
-          height:100%;
-          object-fit:cover;
-          border-radius:13px;
-        "
-        onerror="this.remove()"
-      >
-    `;
-  } else {
-
-    playerCover.textContent =
-      "♪";
-  }
-
-  updateLikeButton();
-
-  if (autoPlay) {
-
-    const playPromise =
-      audio.play();
-
-    if (
-      playPromise &&
-      typeof playPromise.catch ===
-        "function"
-    ) {
-
-      playPromise.catch(
-        error => {
-
-          console.warn(
-            "Playback requires user interaction:",
-            error
-          );
-        }
-      );
-    }
-  }
-
-  renderSongs();
-}
-
-// ==================================================
-// PLAY / PAUSE
-// ==================================================
-
-function togglePlay() {
-
-  if (
-    currentIndex === -1
-  ) {
-
-    if (songs.length) {
-      playSong(0);
-    }
-
-    return;
-  }
-
-  if (audio.paused) {
-
-    audio.play().catch(
-      console.error
-    );
-
-  } else {
-
-    audio.pause();
-  }
-}
-
-audio.addEventListener(
-  "play",
-  () => {
-
-    playButton.textContent =
-      "❚❚";
-
-    renderSongs();
-  }
-);
-
-audio.addEventListener(
-  "pause",
-  () => {
-
-    playButton.textContent =
-      "▶";
-
-    renderSongs();
-  }
-);
-
-// ==================================================
-// NEXT
-// ==================================================
-
-function nextSong() {
-
-  if (!songs.length) {
-    return;
-  }
-
-  let nextIndex;
-
-  if (isShuffle) {
-
-    if (songs.length === 1) {
-      nextIndex = 0;
-    } else {
-
-      do {
-
-        nextIndex =
-          Math.floor(
-            Math.random() *
-              songs.length
-          );
-
-      } while (
-        nextIndex ===
-        currentIndex
-      );
-    }
-
-  } else {
-
-    nextIndex =
-      currentIndex + 1;
-
-    if (
-      nextIndex >=
-      songs.length
-    ) {
-      nextIndex = 0;
-    }
-  }
-
-  playSong(nextIndex);
-}
-
-// ==================================================
-// PREVIOUS
-// ==================================================
-
-function previousSong() {
-
-  if (!songs.length) {
-    return;
-  }
-
-  if (
-    audio.currentTime > 3
-  ) {
-
-    audio.currentTime =
-      0;
-
-    return;
-  }
-
-  let previousIndex =
-    currentIndex - 1;
-
-  if (
-    previousIndex < 0
-  ) {
-    previousIndex =
-      songs.length - 1;
-  }
-
-  playSong(
-    previousIndex
-  );
-}
-
-// ==================================================
-// AUDIO EVENTS
-// ==================================================
-
-audio.addEventListener(
-  "ended",
-  () => {
-
-    if (isRepeat) {
-
-      audio.currentTime =
-        0;
-
-      audio.play().catch(
-        console.error
-      );
-
-      return;
-    }
-
-    nextSong();
-  }
-);
-
-audio.addEventListener(
-  "loadedmetadata",
-  () => {
-
-    duration.textContent =
-      formatTime(
-        audio.duration
-      );
-  }
-);
-
-audio.addEventListener(
-  "timeupdate",
-  () => {
-
-    if (
-      !Number.isFinite(
-        audio.duration
-      ) ||
-      audio.duration <= 0
-    ) {
-      return;
-    }
-
-    const percentage =
-      (
-        audio.currentTime /
-        audio.duration
-      ) * 100;
-
-    progress.value =
-      percentage;
-
-    currentTime.textContent =
-      formatTime(
-        audio.currentTime
-      );
-  }
-);
-
-// ==================================================
-// PROGRESS
-// ==================================================
-
-progress.addEventListener(
-  "input",
-  () => {
-
-    if (
-      !Number.isFinite(
-        audio.duration
-      )
-    ) {
-      return;
-    }
-
-    audio.currentTime =
-      (
-        Number(
-          progress.value
-        ) / 100
-      ) *
-      audio.duration;
-  }
-);
-
-// ==================================================
-// VOLUME
-// ==================================================
-
-volume.addEventListener(
-  "input",
-  () => {
-
-    audio.volume =
-      Number(
-        volume.value
-      );
-  }
-);
-
-// ==================================================
-// SHUFFLE
-// ==================================================
-
-shuffleButton.addEventListener(
-  "click",
-  () => {
-
-    isShuffle =
-      !isShuffle;
-
-    shuffleButton.classList.toggle(
-      "active",
-      isShuffle
-    );
-  }
-);
-
-// ==================================================
-// REPEAT
-// ==================================================
-
-repeatButton.addEventListener(
-  "click",
-  () => {
-
-    isRepeat =
-      !isRepeat;
-
-    repeatButton.classList.toggle(
-      "active",
-      isRepeat
-    );
-  }
-);
-
-// ==================================================
-// LIKE
-// ==================================================
-
-likeButton.addEventListener(
-  "click",
-  () => {
-
-    if (
-      currentIndex === -1
-    ) {
-      return;
-    }
-
-    const song =
-      songs[currentIndex];
-
-    if (!song) {
-      return;
-    }
-
-    const id =
-      String(song.id);
-
-    if (
-      favorites.includes(id)
-    ) {
-
-      favorites =
-        favorites.filter(
-          item =>
-            item !== id
-        );
-
-    } else {
-
-      favorites.push(id);
-    }
-
-    localStorage.setItem(
-      "swarajFavorites",
-      JSON.stringify(
-        favorites
-      )
-    );
-
-    updateLikeButton();
-  }
-);
-
-function updateLikeButton() {
-
-  if (
-    currentIndex === -1
-  ) {
-
-    likeButton.textContent =
-      "♡";
-
-    likeButton.classList.remove(
-      "liked"
-    );
-
-    return;
-  }
-
-  const id =
-    String(
-      songs[currentIndex].id
-    );
-
-  const liked =
-    favorites.includes(id);
-
-  likeButton.textContent =
-    liked
-      ? "♥"
-      : "♡";
-
-  likeButton.classList.toggle(
-    "liked",
-    liked
-  );
-}
-
-// ==================================================
-// SEARCH
-// ==================================================
-
-function setupSearch() {
-
-  searchInput.addEventListener(
-    "input",
-    () => {
-
-      const query =
-        searchInput.value
-          .toLowerCase()
-          .trim();
-
-      clearSearch.classList.toggle(
-        "hidden",
-        !query
-      );
-
-      if (!query) {
-
-        selectCategory(
-          activeCategory
-        );
-
-        return;
-      }
-
-      filteredSongs =
-        songs.filter(
-          song => {
-
-            const text =
-              [
-                song.title,
-                song.artist,
-                song.album,
-                song.category
-              ]
-                .join(" ")
-                .toLowerCase();
-
-            return text.includes(
-              query
+        state.currentIndex =
+            state.songs.findIndex(
+                item =>
+                    item.id === song.id
             );
-          }
+
+        audio.src = song.url;
+
+        audio.volume =
+            state.isMuted
+                ? 0
+                : state.volume;
+
+        updatePlayerUI();
+
+        audio.play()
+            .then(() => {
+
+                state.isPlaying =
+                    true;
+
+                updatePlayButton();
+
+                renderSongs();
+
+            })
+            .catch(
+                (error) => {
+
+                    console.error(
+                        "Playback failed:",
+                        error
+                    );
+
+                    state.isPlaying =
+                        false;
+
+                    updatePlayButton();
+                }
+            );
+    }
+
+    /* ==================================================
+       AUDIO EVENTS
+    ================================================== */
+
+    function setupAudio() {
+
+        audio.addEventListener(
+            "play",
+            () => {
+
+                state.isPlaying =
+                    true;
+
+                updatePlayButton();
+            }
         );
 
-      activeCategory =
-        "Search";
+        audio.addEventListener(
+            "pause",
+            () => {
 
-      songsHeading.textContent =
-        `Search: ${query}`;
+                state.isPlaying =
+                    false;
 
-      renderSongs();
+                updatePlayButton();
+            }
+        );
+
+        audio.addEventListener(
+            "loadedmetadata",
+            () => {
+
+                duration.textContent =
+                    formatTime(
+                        audio.duration
+                    );
+            }
+        );
+
+        audio.addEventListener(
+            "timeupdate",
+            updateProgress
+        );
+
+        audio.addEventListener(
+            "ended",
+            handleEnded
+        );
+
+        audio.addEventListener(
+            "error",
+            () => {
+
+                console.error(
+                    "Audio error:",
+                    audio.error
+                );
+
+                state.isPlaying =
+                    false;
+
+                updatePlayButton();
+            }
+        );
     }
-  );
 
-  clearSearch.addEventListener(
-    "click",
-    () => {
+    /* ==================================================
+       PLAYER CONTROLS
+    ================================================== */
 
-      searchInput.value =
-        "";
+    function setupPlayerControls() {
 
-      clearSearch.classList.add(
-        "hidden"
-      );
+        playButton.addEventListener(
+            "click",
+            togglePlay
+        );
 
-      selectCategory(
-        "All Songs"
-      );
+        heroPlay.addEventListener(
+            "click",
+            () => {
+
+                if (
+                    state.currentSong
+                ) {
+                    togglePlay();
+                    return;
+                }
+
+                if (
+                    state.songs.length
+                ) {
+                    playSong(
+                        state.songs[0]
+                    );
+                }
+            }
+        );
+
+        previousButton.addEventListener(
+            "click",
+            playPrevious
+        );
+
+        nextButton.addEventListener(
+            "click",
+            playNext
+        );
+
+        shuffleButton.addEventListener(
+            "click",
+            toggleShuffle
+        );
+
+        shufflePlayer.addEventListener(
+            "click",
+            toggleShuffle
+        );
+
+        repeatButton.addEventListener(
+            "click",
+            () => {
+
+                state.isRepeat =
+                    !state.isRepeat;
+
+                repeatButton.classList.toggle(
+                    "active",
+                    state.isRepeat
+                );
+            }
+        );
+
+        muteButton.addEventListener(
+            "click",
+            toggleMute
+        );
+
+        volumeSlider.addEventListener(
+            "input",
+            () => {
+
+                state.volume =
+                    Number(
+                        volumeSlider.value
+                    );
+
+                state.isMuted =
+                    state.volume === 0;
+
+                audio.volume =
+                    state.isMuted
+                        ? 0
+                        : state.volume;
+
+                updateMuteIcon();
+            }
+        );
+
+        progressTrack.addEventListener(
+            "click",
+            seekAudio
+        );
+
+        likeButton.addEventListener(
+            "click",
+            () => {
+
+                likeButton.classList.toggle(
+                    "liked"
+                );
+
+                likeButton.textContent =
+                    likeButton.classList.contains(
+                        "liked"
+                    )
+                        ? "♥"
+                        : "♡";
+            }
+        );
     }
-  );
-}
 
-// ==================================================
-// MENU
-// ==================================================
+    function togglePlay() {
 
-function setupMenu() {
+        if (!state.currentSong) {
 
-  menuButton.addEventListener(
-    "click",
-    openSidebar
-  );
+            if (state.songs.length) {
+                playSong(
+                    state.songs[0]
+                );
+            }
 
-  closeMenu.addEventListener(
-    "click",
-    closeSidebar
-  );
+            return;
+        }
 
-  sidebarOverlay.addEventListener(
-    "click",
-    closeSidebar
-  );
-}
+        if (audio.paused) {
 
-function openSidebar() {
+            audio.play()
+                .catch(
+                    console.error
+                );
 
-  sidebar.classList.add(
-    "open"
-  );
+        } else {
 
-  sidebarOverlay.classList.add(
-    "show"
-  );
+            audio.pause();
+        }
+    }
 
-  document.body.style.overflow =
-    "hidden";
-}
+    function playPrevious() {
 
-function closeSidebar() {
+        if (!state.songs.length) {
+            return;
+        }
 
-  sidebar.classList.remove(
-    "open"
-  );
+        if (
+            audio.currentTime > 5
+        ) {
+            audio.currentTime = 0;
+            return;
+        }
 
-  sidebarOverlay.classList.remove(
-    "show"
-  );
+        let index =
+            state.currentIndex - 1;
 
-  document.body.style.overflow =
-    "";
-}
+        if (index < 0) {
+            index =
+                state.songs.length - 1;
+        }
 
-// ==================================================
-// NAVIGATION
-// ==================================================
+        playSong(
+            state.songs[index]
+        );
+    }
 
-function setupNavigation() {
+    function playNext() {
 
-  document
-    .querySelectorAll(
-      ".nav-item"
-    )
-    .forEach(item => {
+        if (!state.songs.length) {
+            return;
+        }
 
-      item.addEventListener(
-        "click",
-        () => {
+        let index;
 
-          document
-            .querySelectorAll(
-              ".nav-item"
+        if (state.isShuffle) {
+
+            index =
+                Math.floor(
+                    Math.random() *
+                    state.songs.length
+                );
+
+        } else {
+
+            index =
+                state.currentIndex + 1;
+
+            if (
+                index >=
+                state.songs.length
+            ) {
+                index = 0;
+            }
+        }
+
+        playSong(
+            state.songs[index]
+        );
+    }
+
+    function toggleShuffle() {
+
+        state.isShuffle =
+            !state.isShuffle;
+
+        shuffleButton.classList.toggle(
+            "active",
+            state.isShuffle
+        );
+
+        shufflePlayer.classList.toggle(
+            "active",
+            state.isShuffle
+        );
+    }
+
+    function handleEnded() {
+
+        if (state.isRepeat) {
+
+            audio.currentTime = 0;
+
+            audio.play();
+
+            return;
+        }
+
+        playNext();
+    }
+
+    /* ==================================================
+       PROGRESS
+    ================================================== */
+
+    function updateProgress() {
+
+        if (
+            !audio.duration ||
+            !Number.isFinite(
+                audio.duration
             )
-            .forEach(
-              nav =>
-                nav.classList.remove(
-                  "active"
+        ) {
+            return;
+        }
+
+        const percentage =
+            (
+                audio.currentTime /
+                audio.duration
+            ) * 100;
+
+        progressLiquid.style.width =
+            `${percentage}%`;
+
+        progressTrack.setAttribute(
+            "aria-valuenow",
+            String(
+                Math.round(
+                    percentage
+                )
+            )
+        );
+
+        currentTime.textContent =
+            formatTime(
+                audio.currentTime
+            );
+    }
+
+    function seekAudio(event) {
+
+        if (
+            !audio.duration ||
+            !Number.isFinite(
+                audio.duration
+            )
+        ) {
+            return;
+        }
+
+        const rect =
+            progressTrack.getBoundingClientRect();
+
+        const percentage =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        event.clientX -
+                        rect.left
+                    ) / rect.width
                 )
             );
 
-          item.classList.add(
-            "active"
-          );
+        audio.currentTime =
+            audio.duration *
+            percentage;
+    }
 
-          const section =
-            item.dataset.section;
+    /* ==================================================
+       VOLUME
+    ================================================== */
 
-          if (
-            section ===
-            "home"
-          ) {
+    function updateVolume() {
 
-            window.scrollTo({
-              top: 0,
-              behavior: "smooth"
-            });
+        audio.volume =
+            state.volume;
 
-          } else if (
-            section ===
-            "search"
-          ) {
+        volumeSlider.value =
+            state.volume;
 
-            searchInput.focus();
+        updateMuteIcon();
+    }
 
-          } else if (
-            section ===
-            "library"
-          ) {
+    function toggleMute() {
 
-            document
-              .querySelector(
-                ".songs-grid"
-              )
-              ?.scrollIntoView({
-                behavior:
-                  "smooth"
-              });
-          }
+        state.isMuted =
+            !state.isMuted;
 
-          if (
-            window.innerWidth <=
-            900
-          ) {
-            closeSidebar();
-          }
+        audio.volume =
+            state.isMuted
+                ? 0
+                : state.volume;
+
+        updateMuteIcon();
+    }
+
+    function updateMuteIcon() {
+
+        muteButton.textContent =
+            state.isMuted
+                ? "×"
+                : "◖";
+    }
+
+    /* ==================================================
+       PLAYER UI
+    ================================================== */
+
+    function updatePlayerUI() {
+
+        if (!state.currentSong) {
+
+            playerTitle.textContent =
+                "No song selected";
+
+            playerArtist.textContent =
+                "Select a song to start";
+
+            return;
         }
-      );
-    });
-}
 
-// ==================================================
-// REFRESH
-// ==================================================
+        playerTitle.textContent =
+            state.currentSong.title;
 
-refreshButton.addEventListener(
-  "click",
-  async () => {
+        playerArtist.textContent =
+            state.currentSong.artist;
 
-    refreshButton.style.transform =
-      "rotate(360deg)";
+        if (
+            state.currentSong.image
+        ) {
 
-    setTimeout(
-      () => {
-        refreshButton.style.transform =
-          "";
-      },
-      500
-    );
+            playerCover.style.backgroundImage =
+                `url("${state.currentSong.image}")`;
 
-    await loadSongs();
-  }
-);
+            playerCover.style.backgroundSize =
+                "cover";
 
-// ==================================================
-// HERO PLAY
-// ==================================================
-
-heroPlay.addEventListener(
-  "click",
-  () => {
-
-    if (!songs.length) {
-      return;
+            playerCover.style.backgroundPosition =
+                "center";
+        }
     }
 
-    if (
-      currentIndex === -1
+    function updatePlayButton() {
+
+        playButton.textContent =
+            state.isPlaying
+                ? "Ⅱ"
+                : "▶";
+
+        playButton.setAttribute(
+            "aria-label",
+            state.isPlaying
+                ? "Pause"
+                : "Play"
+        );
+
+        heroPlay.querySelector(
+            ".button-icon"
+        ).textContent =
+            state.isPlaying
+                ? "Ⅱ"
+                : "▶";
+    }
+
+    /* ==================================================
+       KEYBOARD
+    ================================================== */
+
+    function setupKeyboard() {
+
+        document.addEventListener(
+            "keydown",
+            (event) => {
+
+                if (
+                    event.target.tagName ===
+                        "INPUT"
+                ) {
+                    return;
+                }
+
+                if (
+                    event.code ===
+                    "Space"
+                ) {
+
+                    event.preventDefault();
+
+                    togglePlay();
+                }
+
+                if (
+                    event.code ===
+                    "ArrowRight"
+                ) {
+
+                    playNext();
+                }
+
+                if (
+                    event.code ===
+                    "ArrowLeft"
+                ) {
+
+                    playPrevious();
+                }
+            }
+        );
+    }
+
+    /* ==================================================
+       TOUCH
+    ================================================== */
+
+    function setupTouch() {
+
+        let touchStartX = 0;
+
+        document.addEventListener(
+            "touchstart",
+            (event) => {
+
+                if (
+                    !event.touches.length
+                ) {
+                    return;
+                }
+
+                touchStartX =
+                    event.touches[0]
+                        .clientX;
+            },
+            {
+                passive: true
+            }
+        );
+
+        document.addEventListener(
+            "touchend",
+            (event) => {
+
+                if (
+                    !event.changedTouches.length
+                ) {
+                    return;
+                }
+
+                const touchEndX =
+                    event.changedTouches[0]
+                        .clientX;
+
+                const difference =
+                    touchEndX -
+                    touchStartX;
+
+                if (
+                    Math.abs(
+                        difference
+                    ) < 80
+                ) {
+                    return;
+                }
+
+                if (
+                    difference < 0
+                ) {
+                    playNext();
+                } else {
+                    playPrevious();
+                }
+            },
+            {
+                passive: true
+            }
+        );
+    }
+
+    /* ==================================================
+       LOADING
+    ================================================== */
+
+    function showLoading() {
+
+        songGrid.innerHTML = `
+            <div class="empty-state">
+
+                <div class="empty-icon">
+                    ◌
+                </div>
+
+                <h3>
+                    Loading your music
+                </h3>
+
+                <p>
+                    Scanning the songs folder...
+                </p>
+
+            </div>
+        `;
+    }
+
+    function showError(
+        title,
+        message
     ) {
 
-      playSong(0);
+        songGrid.innerHTML = `
+            <div class="empty-state">
 
-    } else {
+                <div class="empty-icon">
+                    !
+                </div>
 
-      togglePlay();
-    }
-  }
-);
+                <h3>
+                    ${escapeHtml(title)}
+                </h3>
 
-// ==================================================
-// PLAYER BUTTONS
-// ==================================================
+                <p>
+                    ${escapeHtml(message)}
+                </p>
 
-playButton.addEventListener(
-  "click",
-  togglePlay
-);
+                <button
+                    class="primary-button liquid-button"
+                    style="margin:20px auto 0"
+                    type="button"
+                    onclick="location.reload()"
+                >
+                    Retry
+                </button>
 
-nextButton.addEventListener(
-  "click",
-  nextSong
-);
-
-previousButton.addEventListener(
-  "click",
-  previousSong
-);
-
-// ==================================================
-// SHOW ALL
-// ==================================================
-
-showAllCategories.addEventListener(
-  "click",
-  () => {
-
-    selectCategory(
-      "All Songs"
-    );
-
-    window.scrollTo({
-      top: 350,
-      behavior: "smooth"
-    });
-  }
-);
-
-// ==================================================
-// KEYBOARD
-// ==================================================
-
-document.addEventListener(
-  "keydown",
-  event => {
-
-    if (
-      event.target.matches(
-        "input, textarea"
-      )
-    ) {
-      return;
+            </div>
+        `;
     }
 
-    if (
-      event.code ===
-      "Space"
-    ) {
+    /* ==================================================
+       UTILITIES
+    ================================================== */
 
-      event.preventDefault();
+    function formatTime(seconds) {
 
-      togglePlay();
+        if (
+            !Number.isFinite(
+                seconds
+            ) ||
+            seconds < 0
+        ) {
+            return "0:00";
+        }
+
+        const minutes =
+            Math.floor(
+                seconds / 60
+            );
+
+        const remaining =
+            Math.floor(
+                seconds % 60
+            );
+
+        return (
+            `${minutes}:` +
+            `${remaining
+                .toString()
+                .padStart(2, "0")}`
+        );
     }
 
-    if (
-      event.code ===
-      "ArrowRight"
-    ) {
-      nextSong();
+    function escapeHtml(value) {
+
+        return String(value)
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
     }
 
-    if (
-      event.code ===
-      "ArrowLeft"
-    ) {
-      previousSong();
+    function escapeAttribute(value) {
+        return escapeHtml(value);
     }
-  }
-);
 
-// ==================================================
-// HELPERS
-// ==================================================
-
-function formatTime(
-  seconds
-) {
-
-  if (
-    !Number.isFinite(
-      seconds
-    )
-  ) {
-    return "0:00";
-  }
-
-  const minutes =
-    Math.floor(
-      seconds / 60
-    );
-
-  const remaining =
-    Math.floor(
-      seconds % 60
-    );
-
-  return `${minutes}:${String(
-    remaining
-  ).padStart(
-    2,
-    "0"
-  )}`;
-}
-
-function escapeHtml(
-  value
-) {
-
-  return String(
-    value ?? ""
-  )
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
-}
-
-function escapeAttr(
-  value
-) {
-  return escapeHtml(value);
-}
-
-function showLoading() {
-
-  songsGrid.innerHTML = `
-    <div class="loading">
-      Loading songs...
-    </div>
-  `;
-
-  emptyState.classList.add(
-    "hidden"
-  );
-}
+})();
