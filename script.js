@@ -1,55 +1,84 @@
-/* ==================================================
-   स्वरAJ MUSIC PLAYER
-   Local songs only
-================================================== */
+/* =====================================================
+   स्वरAJ MUSIC ENGINE
+   Local Music + YouTube
+===================================================== */
 
 (() => {
+
     "use strict";
 
-    /* ==================================================
+    /* =================================================
        STATE
-    ================================================== */
+    ================================================= */
 
     const state = {
+
         songs: [],
+
         filteredSongs: [],
 
         activeCategory: "All Songs",
 
         currentIndex: -1,
+
         currentSong: null,
 
         isPlaying: false,
+
         isShuffle: false,
+
         isRepeat: false,
+
         isMuted: false,
 
-        volume: 0.8
+        volume: 0.8,
+
+        youtubeVideos: [],
+
+        youtubeCurrentId: null
+
     };
 
-    /* ==================================================
+    /* =================================================
        DOM
-    ================================================== */
+    ================================================= */
 
-    const $ = (selector) =>
+    const $ = selector =>
         document.querySelector(selector);
 
-    const audio = $("#audio");
+    const audio =
+        $("#audio");
 
-    const sidebar = $("#sidebar");
-    const menuButton = $("#menuButton");
-    const sidebarClose = $("#sidebarClose");
-    const mobileOverlay = $("#mobileOverlay");
+    const sidebar =
+        $("#sidebar");
 
-    const searchInput = $("#searchInput");
-    const clearSearch = $("#clearSearch");
+    const menuButton =
+        $("#menuButton");
 
-    const categoryList = $("#categoryList");
-    const categoryCards = $("#categoryCards");
+    const sidebarClose =
+        $("#sidebarClose");
 
-    const songGrid = $("#songGrid");
+    const mobileOverlay =
+        $("#mobileOverlay");
 
-    const songsTitle = $("#songsTitle");
+    const searchInput =
+        $("#searchInput");
+
+    const clearSearch =
+        $("#clearSearch");
+
+    const categoryList =
+        $("#categoryList");
+
+    const categoryCards =
+        $("#categoryCards");
+
+    const songGrid =
+        $("#songGrid");
+
+    const songsTitle =
+        $("#songsTitle");
+
     const activeCategoryLabel =
         $("#activeCategoryLabel");
 
@@ -110,9 +139,27 @@
     const likeButton =
         $("#likeButton");
 
-    /* ==================================================
+    const homePage =
+        $("#homePage");
+
+    const youtubePage =
+        $("#youtubePage");
+
+    const youtubeSearch =
+        $("#youtubeSearch");
+
+    const youtubeSearchButton =
+        $("#youtubeSearchButton");
+
+    const youtubeResults =
+        $("#youtubeResults");
+
+    const youtubePlayer =
+        $("#youtubePlayer");
+
+    /* =================================================
        INIT
-    ================================================== */
+    ================================================= */
 
     document.addEventListener(
         "DOMContentLoaded",
@@ -127,72 +174,85 @@
 
         setupSearch();
 
-        setupPlayerControls();
+        setupPlayer();
 
         setupAudio();
 
         setupKeyboard();
 
-        setupTouch();
+        setupHero();
+
+        setupYouTube();
 
         updateVolume();
 
         await loadSongs();
+
     }
 
-    /* ==================================================
-       MENU
-    ================================================== */
+    /* =================================================
+       MOBILE MENU
+    ================================================= */
 
     function setupMenu() {
 
-        menuButton.addEventListener(
+        menuButton?.addEventListener(
             "click",
             toggleMenu
         );
 
-        sidebarClose.addEventListener(
+        sidebarClose?.addEventListener(
             "click",
             closeMenu
         );
 
-        mobileOverlay.addEventListener(
+        mobileOverlay?.addEventListener(
             "click",
             closeMenu
         );
 
         document.addEventListener(
             "keydown",
-            (event) => {
+            event => {
 
                 if (
                     event.key === "Escape"
                 ) {
                     closeMenu();
                 }
+
             }
         );
+
     }
 
     function toggleMenu() {
 
-        const isOpen =
-            sidebar.classList.contains("open");
+        if (
+            sidebar.classList.contains("open")
+        ) {
 
-        if (isOpen) {
             closeMenu();
+
         } else {
+
             openMenu();
+
         }
+
     }
 
     function openMenu() {
 
         sidebar.classList.add("open");
 
-        mobileOverlay.classList.add("active");
+        mobileOverlay.classList.add(
+            "active"
+        );
 
-        menuButton.classList.add("active");
+        menuButton.classList.add(
+            "active"
+        );
 
         menuButton.setAttribute(
             "aria-expanded",
@@ -204,8 +264,6 @@
             "false"
         );
 
-        document.body.style.overflow =
-            "hidden";
     }
 
     function closeMenu() {
@@ -216,7 +274,9 @@
             "active"
         );
 
-        menuButton.classList.remove("active");
+        menuButton.classList.remove(
+            "active"
+        );
 
         menuButton.setAttribute(
             "aria-expanded",
@@ -228,18 +288,17 @@
             "true"
         );
 
-        document.body.style.overflow = "";
     }
 
-    /* ==================================================
+    /* =================================================
        NAVIGATION
-    ================================================== */
+    ================================================= */
 
     function setupNavigation() {
 
         document
             .querySelectorAll(".nav-item")
-            .forEach((button) => {
+            .forEach(button => {
 
                 button.addEventListener(
                     "click",
@@ -249,7 +308,7 @@
                             .querySelectorAll(
                                 ".nav-item"
                             )
-                            .forEach((item) =>
+                            .forEach(item =>
                                 item.classList.remove(
                                     "active"
                                 )
@@ -262,41 +321,92 @@
                         const view =
                             button.dataset.view;
 
-                        if (view === "home") {
-
-                            window.scrollTo({
-                                top: 0,
-                                behavior: "smooth"
-                            });
-
-                        } else if (
-                            view === "search"
+                        if (
+                            view === "youtube"
                         ) {
 
-                            searchInput.focus();
+                            showYouTube();
 
-                        } else if (
-                            view === "library"
-                        ) {
+                        } else {
 
-                            setCategory(
-                                "All Songs"
-                            );
+                            showHome();
+
+                            if (
+                                view === "home"
+                            ) {
+
+                                window.scrollTo({
+                                    top: 0,
+                                    behavior:
+                                        "smooth"
+                                });
+
+                            }
+
+                            if (
+                                view === "search"
+                            ) {
+
+                                setTimeout(
+                                    () =>
+                                        searchInput.focus(),
+                                    150
+                                );
+
+                            }
+
+                            if (
+                                view === "library"
+                            ) {
+
+                                setCategory(
+                                    "All Songs"
+                                );
+
+                            }
+
                         }
 
                         if (
-                            window.innerWidth <= 800
+                            window.innerWidth <=
+                            800
                         ) {
+
                             closeMenu();
+
                         }
+
                     }
                 );
+
             });
+
     }
 
-    /* ==================================================
+    function showHome() {
+
+        homePage.hidden = false;
+
+        youtubePage.hidden = true;
+
+    }
+
+    function showYouTube() {
+
+        homePage.hidden = true;
+
+        youtubePage.hidden = false;
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+
+    }
+
+    /* =================================================
        SONG API
-    ================================================== */
+    ================================================= */
 
     async function loadSongs() {
 
@@ -313,9 +423,11 @@
                 );
 
             if (!response.ok) {
+
                 throw new Error(
                     `HTTP ${response.status}`
                 );
+
             }
 
             const data =
@@ -325,13 +437,17 @@
                 !data ||
                 !Array.isArray(data.songs)
             ) {
+
                 throw new Error(
                     "Invalid song response"
                 );
+
             }
 
             state.songs =
-                normalizeSongs(data.songs);
+                normalizeSongs(
+                    data.songs
+                );
 
             state.filteredSongs =
                 [...state.songs];
@@ -346,20 +462,18 @@
         } catch (error) {
 
             console.error(
-                "Unable to load songs:",
+                "Song loading error:",
                 error
             );
 
             showError(
                 "Unable to load songs",
-                "Check that your server is running and your songs folder contains supported audio files."
+                "Check /api/songs and make sure your songs folder contains audio files."
             );
-        }
-    }
 
-    /* ==================================================
-       NORMALIZE
-    ================================================== */
+        }
+
+    }
 
     function normalizeSongs(songs) {
 
@@ -392,20 +506,22 @@
                 image:
                     song.image ||
                     "/images/default-cover.svg"
+
             })
         );
+
     }
 
-    /* ==================================================
+    /* =================================================
        CATEGORIES
-    ================================================== */
+    ================================================= */
 
     function getCategories() {
 
         const map =
             new Map();
 
-        for (const song of state.songs) {
+        state.songs.forEach(song => {
 
             const category =
                 song.category ||
@@ -415,7 +531,8 @@
                 category,
                 (map.get(category) || 0) + 1
             );
-        }
+
+        });
 
         return Array.from(
             map.entries()
@@ -432,6 +549,7 @@
                         b.name
                     )
             );
+
     }
 
     function renderCategories() {
@@ -439,47 +557,41 @@
         const categories =
             getCategories();
 
-        /* Sidebar */
-
         categoryList.innerHTML = "";
 
-        const allButton =
+        categoryList.appendChild(
             createCategoryButton(
                 "All Songs",
-                state.songs.length,
-                true
-            );
-
-        categoryList.appendChild(
-            allButton
+                state.songs.length
+            )
         );
 
         categories.forEach(
-            (category) => {
+            category => {
 
                 categoryList.appendChild(
                     createCategoryButton(
                         category.name,
-                        category.count,
-                        false
+                        category.count
                     )
                 );
+
             }
         );
-
-        /* Cards */
 
         categoryCards.innerHTML = "";
 
         if (!categories.length) {
 
-            categoryCards.innerHTML = `
+            categoryCards.innerHTML =
+                `
                 <div class="loading-card">
                     No categories found.
                 </div>
-            `;
+                `;
 
             return;
+
         }
 
         categories.forEach(
@@ -495,19 +607,23 @@
                 card.className =
                     "category-card";
 
-                card.innerHTML = `
+                card.innerHTML =
+                    `
                     <div class="category-card-icon">
                         ${getCategoryIcon(index)}
                     </div>
 
                     <div class="category-card-title">
-                        ${escapeHtml(category.name)}
+                        ${escapeHtml(
+                            category.name
+                        )}
                     </div>
 
                     <span class="category-card-count">
-                        ${category.count} song${category.count === 1 ? "" : "s"}
+                        ${category.count}
+                        song${category.count === 1 ? "" : "s"}
                     </span>
-                `;
+                    `;
 
                 card.addEventListener(
                     "click",
@@ -520,14 +636,15 @@
                 categoryCards.appendChild(
                     card
                 );
+
             }
         );
+
     }
 
     function createCategoryButton(
         name,
-        count,
-        active
+        count
     ) {
 
         const button =
@@ -540,17 +657,23 @@
         button.className =
             "category-item";
 
-        if (active) {
-            button.classList.add(
-                "active"
-            );
-        }
-
         button.dataset.category =
             name;
 
-        button.innerHTML = `
-            <span class="category-symbol">
+        if (
+            state.activeCategory ===
+            name
+        ) {
+
+            button.classList.add(
+                "active"
+            );
+
+        }
+
+        button.innerHTML =
+            `
+            <span class="cat-icon">
                 ${getCategoryIcon(
                     name.length
                 )}
@@ -563,7 +686,7 @@
             <small>
                 ${count}
             </small>
-        `;
+            `;
 
         button.addEventListener(
             "click",
@@ -572,14 +695,19 @@
                 setCategory(name);
 
                 if (
-                    window.innerWidth <= 800
+                    window.innerWidth <=
+                    800
                 ) {
+
                     closeMenu();
+
                 }
+
             }
         );
 
         return button;
+
     }
 
     function getCategoryIcon(index) {
@@ -600,6 +728,7 @@
             Math.abs(index) %
             icons.length
         ];
+
     }
 
     function setCategory(category) {
@@ -611,16 +740,15 @@
             .querySelectorAll(
                 ".category-item"
             )
-            .forEach(
-                (button) => {
+            .forEach(button => {
 
-                    button.classList.toggle(
-                        "active",
-                        button.dataset.category ===
-                            category
-                    );
-                }
-            );
+                button.classList.toggle(
+                    "active",
+                    button.dataset.category ===
+                    category
+                );
+
+            });
 
         songsTitle.textContent =
             category;
@@ -631,11 +759,14 @@
                 : "CATEGORY";
 
         applyFilters();
+
+        showHome();
+
     }
 
-    /* ==================================================
+    /* =================================================
        SEARCH
-    ================================================== */
+    ================================================= */
 
     function setupSearch() {
 
@@ -649,6 +780,7 @@
                         : "none";
 
                 applyFilters();
+
             }
         );
 
@@ -664,25 +796,26 @@
                 applyFilters();
 
                 searchInput.focus();
+
             }
         );
 
         $("#showAllCategories")
-            .addEventListener(
+            ?.addEventListener(
                 "click",
                 () => {
 
-                    window.scrollTo({
-                        top:
-                            document
-                                .querySelector(
-                                    ".category-section"
-                                )
-                                .offsetTop - 80,
-                        behavior: "smooth"
-                    });
+                    document
+                        .querySelector(
+                            ".category-grid"
+                        )
+                        ?.scrollIntoView({
+                            behavior: "smooth"
+                        });
+
                 }
             );
+
     }
 
     function applyFilters() {
@@ -694,13 +827,13 @@
 
         state.filteredSongs =
             state.songs.filter(
-                (song) => {
+                song => {
 
                     const categoryMatch =
                         state.activeCategory ===
-                            "All Songs" ||
+                        "All Songs" ||
                         song.category ===
-                            state.activeCategory;
+                        state.activeCategory;
 
                     if (!categoryMatch) {
                         return false;
@@ -723,15 +856,17 @@
                             .toLowerCase()
                             .includes(query)
                     );
+
                 }
             );
 
         renderSongs();
+
     }
 
-    /* ==================================================
+    /* =================================================
        SONG RENDER
-    ================================================== */
+    ================================================= */
 
     function renderSongs() {
 
@@ -740,28 +875,30 @@
         visibleSongCount.textContent =
             state.filteredSongs.length;
 
-        if (!state.filteredSongs.length) {
+        if (
+            !state.filteredSongs.length
+        ) {
 
-            songGrid.innerHTML = `
+            songGrid.innerHTML =
+                `
                 <div class="empty-state">
 
-                    <div class="empty-icon">
-                        ♪
-                    </div>
+                    <div>♪</div>
 
                     <h3>
                         No songs found
                     </h3>
 
                     <p>
-                        Add MP3/audio files to your
-                        songs folder or change your search.
+                        Add audio files to
+                        your songs folder.
                     </p>
 
                 </div>
-            `;
+                `;
 
             return;
+
         }
 
         state.filteredSongs.forEach(
@@ -778,27 +915,34 @@
                 if (
                     state.currentSong &&
                     state.currentSong.id ===
-                        song.id
+                    song.id
                 ) {
+
                     card.classList.add(
                         "playing"
                     );
+
                 }
 
-                card.innerHTML = `
+                card.innerHTML =
+                    `
                     <div class="song-cover">
 
                         <img
-                            src="${escapeAttribute(song.image)}"
+                            src="${escapeAttribute(
+                                song.image
+                            )}"
                             alt=""
                             loading="lazy"
-                            onerror="this.style.display='none'"
+                            onerror="
+                                this.style.display='none'
+                            "
                         >
 
                         <button
-                            class="song-play liquid-button"
+                            class="song-play"
                             type="button"
-                            aria-label="Play ${escapeAttribute(song.title)}"
+                            aria-label="Play"
                         >
                             ▶
                         </button>
@@ -808,11 +952,15 @@
                     <div class="song-info">
 
                         <span class="song-title">
-                            ${escapeHtml(song.title)}
+                            ${escapeHtml(
+                                song.title
+                            )}
                         </span>
 
                         <span class="song-artist">
-                            ${escapeHtml(song.artist)}
+                            ${escapeHtml(
+                                song.artist
+                            )}
                         </span>
 
                     </div>
@@ -824,7 +972,7 @@
                     >
                         ⋮
                     </button>
-                `;
+                    `;
 
                 const play =
                     card.querySelector(
@@ -833,16 +981,19 @@
 
                 play.addEventListener(
                     "click",
-                    (event) => {
+                    event => {
 
                         event.stopPropagation();
 
-                        playSong(song);
+                        playSong(
+                            song
+                        );
+
                     }
                 );
 
                 card.addEventListener(
-                    "click",
+                    "dblclick",
                     () =>
                         playSong(song)
                 );
@@ -850,142 +1001,17 @@
                 songGrid.appendChild(
                     card
                 );
+
             }
         );
+
     }
 
-    /* ==================================================
-       PLAY SONG
-    ================================================== */
+    /* =================================================
+       PLAYER
+    ================================================= */
 
-    function playSong(song) {
-
-        if (!song || !song.url) {
-
-            console.error(
-                "Song URL missing:",
-                song
-            );
-
-            return;
-        }
-
-        state.currentSong =
-            song;
-
-        state.currentIndex =
-            state.songs.findIndex(
-                item =>
-                    item.id === song.id
-            );
-
-        audio.src = song.url;
-
-        audio.volume =
-            state.isMuted
-                ? 0
-                : state.volume;
-
-        updatePlayerUI();
-
-        audio.play()
-            .then(() => {
-
-                state.isPlaying =
-                    true;
-
-                updatePlayButton();
-
-                renderSongs();
-
-            })
-            .catch(
-                (error) => {
-
-                    console.error(
-                        "Playback failed:",
-                        error
-                    );
-
-                    state.isPlaying =
-                        false;
-
-                    updatePlayButton();
-                }
-            );
-    }
-
-    /* ==================================================
-       AUDIO EVENTS
-    ================================================== */
-
-    function setupAudio() {
-
-        audio.addEventListener(
-            "play",
-            () => {
-
-                state.isPlaying =
-                    true;
-
-                updatePlayButton();
-            }
-        );
-
-        audio.addEventListener(
-            "pause",
-            () => {
-
-                state.isPlaying =
-                    false;
-
-                updatePlayButton();
-            }
-        );
-
-        audio.addEventListener(
-            "loadedmetadata",
-            () => {
-
-                duration.textContent =
-                    formatTime(
-                        audio.duration
-                    );
-            }
-        );
-
-        audio.addEventListener(
-            "timeupdate",
-            updateProgress
-        );
-
-        audio.addEventListener(
-            "ended",
-            handleEnded
-        );
-
-        audio.addEventListener(
-            "error",
-            () => {
-
-                console.error(
-                    "Audio error:",
-                    audio.error
-                );
-
-                state.isPlaying =
-                    false;
-
-                updatePlayButton();
-            }
-        );
-    }
-
-    /* ==================================================
-       PLAYER CONTROLS
-    ================================================== */
-
-    function setupPlayerControls() {
+    function setupPlayer() {
 
         playButton.addEventListener(
             "click",
@@ -999,28 +1025,30 @@
                 if (
                     state.currentSong
                 ) {
-                    togglePlay();
-                    return;
-                }
 
-                if (
+                    togglePlay();
+
+                } else if (
                     state.songs.length
                 ) {
+
                     playSong(
                         state.songs[0]
                     );
-                }
-            }
-        );
 
-        previousButton.addEventListener(
-            "click",
-            playPrevious
+                }
+
+            }
         );
 
         nextButton.addEventListener(
             "click",
-            playNext
+            nextSong
+        );
+
+        previousButton.addEventListener(
+            "click",
+            previousSong
         );
 
         shuffleButton.addEventListener(
@@ -1044,6 +1072,7 @@
                     "active",
                     state.isRepeat
                 );
+
             }
         );
 
@@ -1054,23 +1083,7 @@
 
         volumeSlider.addEventListener(
             "input",
-            () => {
-
-                state.volume =
-                    Number(
-                        volumeSlider.value
-                    );
-
-                state.isMuted =
-                    state.volume === 0;
-
-                audio.volume =
-                    state.isMuted
-                        ? 0
-                        : state.volume;
-
-                updateMuteIcon();
-            }
+            updateVolume
         );
 
         progressTrack.addEventListener(
@@ -1082,18 +1095,150 @@
             "click",
             () => {
 
-                likeButton.classList.toggle(
-                    "liked"
-                );
-
                 likeButton.textContent =
-                    likeButton.classList.contains(
-                        "liked"
-                    )
-                        ? "♥"
-                        : "♡";
+                    likeButton.textContent ===
+                    "♥"
+                        ? "♡"
+                        : "♥";
+
             }
         );
+
+    }
+
+    function setupAudio() {
+
+        audio.addEventListener(
+            "loadedmetadata",
+            () => {
+
+                duration.textContent =
+                    formatTime(
+                        audio.duration
+                    );
+
+            }
+        );
+
+        audio.addEventListener(
+            "timeupdate",
+            updateProgress
+        );
+
+        audio.addEventListener(
+            "play",
+            () => {
+
+                state.isPlaying = true;
+
+                updatePlayButtons();
+
+                renderSongs();
+
+            }
+        );
+
+        audio.addEventListener(
+            "pause",
+            () => {
+
+                state.isPlaying = false;
+
+                updatePlayButtons();
+
+                renderSongs();
+
+            }
+        );
+
+        audio.addEventListener(
+            "ended",
+            () => {
+
+                if (
+                    state.isRepeat
+                ) {
+
+                    audio.currentTime = 0;
+
+                    audio.play();
+
+                } else {
+
+                    nextSong();
+
+                }
+
+            }
+        );
+
+        audio.addEventListener(
+            "error",
+            event => {
+
+                console.error(
+                    "Audio error:",
+                    event
+                );
+
+            }
+        );
+
+    }
+
+    function playSong(song) {
+
+        if (!song || !song.url) {
+            return;
+        }
+
+        state.currentSong =
+            song;
+
+        state.currentIndex =
+            state.songs.findIndex(
+                item =>
+                    item.id ===
+                    song.id
+            );
+
+        audio.src =
+            song.url;
+
+        audio.volume =
+            state.volume;
+
+        audio.muted =
+            state.isMuted;
+
+        playerTitle.textContent =
+            song.title;
+
+        playerArtist.textContent =
+            song.artist;
+
+        if (song.image) {
+
+            playerCover.style.backgroundImage =
+                `url("${song.image}")`;
+
+            playerCover.style.backgroundSize =
+                "cover";
+
+            playerCover.textContent = "";
+
+        }
+
+        audio.play()
+            .catch(error =>
+                console.warn(
+                    "Playback blocked:",
+                    error
+                )
+            );
+
+        renderSongs();
+
     }
 
     function togglePlay() {
@@ -1101,28 +1246,69 @@
         if (!state.currentSong) {
 
             if (state.songs.length) {
+
                 playSong(
                     state.songs[0]
                 );
+
             }
 
             return;
+
         }
 
         if (audio.paused) {
 
             audio.play()
-                .catch(
-                    console.error
-                );
+                .catch(console.error);
 
         } else {
 
             audio.pause();
+
         }
+
     }
 
-    function playPrevious() {
+    function nextSong() {
+
+        if (!state.songs.length) {
+            return;
+        }
+
+        let nextIndex;
+
+        if (state.isShuffle) {
+
+            nextIndex =
+                Math.floor(
+                    Math.random() *
+                    state.songs.length
+                );
+
+        } else {
+
+            nextIndex =
+                state.currentIndex + 1;
+
+            if (
+                nextIndex >=
+                state.songs.length
+            ) {
+
+                nextIndex = 0;
+
+            }
+
+        }
+
+        playSong(
+            state.songs[nextIndex]
+        );
+
+    }
+
+    function previousSong() {
 
         if (!state.songs.length) {
             return;
@@ -1131,55 +1317,29 @@
         if (
             audio.currentTime > 5
         ) {
+
             audio.currentTime = 0;
+
             return;
+
         }
 
-        let index =
+        let previousIndex =
             state.currentIndex - 1;
 
-        if (index < 0) {
-            index =
+        if (
+            previousIndex < 0
+        ) {
+
+            previousIndex =
                 state.songs.length - 1;
+
         }
 
         playSong(
-            state.songs[index]
+            state.songs[previousIndex]
         );
-    }
 
-    function playNext() {
-
-        if (!state.songs.length) {
-            return;
-        }
-
-        let index;
-
-        if (state.isShuffle) {
-
-            index =
-                Math.floor(
-                    Math.random() *
-                    state.songs.length
-                );
-
-        } else {
-
-            index =
-                state.currentIndex + 1;
-
-            if (
-                index >=
-                state.songs.length
-            ) {
-                index = 0;
-            }
-        }
-
-        playSong(
-            state.songs[index]
-        );
     }
 
     function toggleShuffle() {
@@ -1196,105 +1356,7 @@
             "active",
             state.isShuffle
         );
-    }
 
-    function handleEnded() {
-
-        if (state.isRepeat) {
-
-            audio.currentTime = 0;
-
-            audio.play();
-
-            return;
-        }
-
-        playNext();
-    }
-
-    /* ==================================================
-       PROGRESS
-    ================================================== */
-
-    function updateProgress() {
-
-        if (
-            !audio.duration ||
-            !Number.isFinite(
-                audio.duration
-            )
-        ) {
-            return;
-        }
-
-        const percentage =
-            (
-                audio.currentTime /
-                audio.duration
-            ) * 100;
-
-        progressLiquid.style.width =
-            `${percentage}%`;
-
-        progressTrack.setAttribute(
-            "aria-valuenow",
-            String(
-                Math.round(
-                    percentage
-                )
-            )
-        );
-
-        currentTime.textContent =
-            formatTime(
-                audio.currentTime
-            );
-    }
-
-    function seekAudio(event) {
-
-        if (
-            !audio.duration ||
-            !Number.isFinite(
-                audio.duration
-            )
-        ) {
-            return;
-        }
-
-        const rect =
-            progressTrack.getBoundingClientRect();
-
-        const percentage =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    (
-                        event.clientX -
-                        rect.left
-                    ) / rect.width
-                )
-            );
-
-        audio.currentTime =
-            audio.duration *
-            percentage;
-    }
-
-    /* ==================================================
-       VOLUME
-    ================================================== */
-
-    function updateVolume() {
-
-        audio.volume =
-            state.volume;
-
-        volumeSlider.value =
-            state.volume;
-
-        updateMuteIcon();
     }
 
     function toggleMute() {
@@ -1302,97 +1364,428 @@
         state.isMuted =
             !state.isMuted;
 
-        audio.volume =
-            state.isMuted
-                ? 0
-                : state.volume;
-
-        updateMuteIcon();
-    }
-
-    function updateMuteIcon() {
+        audio.muted =
+            state.isMuted;
 
         muteButton.textContent =
             state.isMuted
                 ? "×"
                 : "◖";
+
     }
 
-    /* ==================================================
-       PLAYER UI
-    ================================================== */
+    function updateVolume() {
 
-    function updatePlayerUI() {
+        state.volume =
+            Number(
+                volumeSlider.value
+            );
 
-        if (!state.currentSong) {
+        audio.volume =
+            state.volume;
 
-            playerTitle.textContent =
-                "No song selected";
+        if (
+            state.volume > 0 &&
+            state.isMuted
+        ) {
 
-            playerArtist.textContent =
-                "Select a song to start";
+            state.isMuted = false;
 
+            audio.muted = false;
+
+        }
+
+    }
+
+    function updateProgress() {
+
+        if (
+            !audio.duration
+        ) {
             return;
         }
 
-        playerTitle.textContent =
-            state.currentSong.title;
+        const percent =
+            (
+                audio.currentTime /
+                audio.duration
+            ) * 100;
 
-        playerArtist.textContent =
-            state.currentSong.artist;
+        progressLiquid.style.width =
+            `${percent}%`;
 
-        if (
-            state.currentSong.image
-        ) {
+        currentTime.textContent =
+            formatTime(
+                audio.currentTime
+            );
 
-            playerCover.style.backgroundImage =
-                `url("${state.currentSong.image}")`;
+        duration.textContent =
+            formatTime(
+                audio.duration
+            );
 
-            playerCover.style.backgroundSize =
-                "cover";
-
-            playerCover.style.backgroundPosition =
-                "center";
-        }
-    }
-
-    function updatePlayButton() {
-
-        playButton.textContent =
-            state.isPlaying
-                ? "Ⅱ"
-                : "▶";
-
-        playButton.setAttribute(
-            "aria-label",
-            state.isPlaying
-                ? "Pause"
-                : "Play"
+        progressTrack.setAttribute(
+            "aria-valuenow",
+            String(
+                Math.round(percent)
+            )
         );
 
-        heroPlay.querySelector(
-            ".button-icon"
-        ).textContent =
+    }
+
+    function seekAudio(event) {
+
+        if (!audio.duration) {
+            return;
+        }
+
+        const rect =
+            progressTrack.getBoundingClientRect();
+
+        const percent =
+            Math.min(
+                1,
+                Math.max(
+                    0,
+                    (
+                        event.clientX -
+                        rect.left
+                    ) /
+                    rect.width
+                )
+            );
+
+        audio.currentTime =
+            audio.duration *
+            percent;
+
+    }
+
+    function updatePlayButtons() {
+
+        const symbol =
             state.isPlaying
                 ? "Ⅱ"
                 : "▶";
+
+        playButton.textContent =
+            symbol;
+
+        heroPlay.innerHTML =
+            `
+            <b>
+                ${symbol}
+            </b>
+            ${state.isPlaying
+                ? "Pause"
+                : "Play Music"}
+            `;
+
     }
 
-    /* ==================================================
+    /* =================================================
+       HERO
+    ================================================= */
+
+    function setupHero() {
+
+        const art =
+            $("#heroArt");
+
+        if (!art) {
+            return;
+        }
+
+        art.addEventListener(
+            "pointermove",
+            event => {
+
+                const rect =
+                    art.getBoundingClientRect();
+
+                const x =
+                    (
+                        event.clientX -
+                        rect.left
+                    ) /
+                    rect.width -
+                    .5;
+
+                const y =
+                    (
+                        event.clientY -
+                        rect.top
+                    ) /
+                    rect.height -
+                    .5;
+
+                art.style.transform =
+                    `
+                    perspective(700px)
+                    rotateY(${x * 14}deg)
+                    rotateX(${-y * 14}deg)
+                    scale(1.04)
+                    `;
+
+            }
+        );
+
+        art.addEventListener(
+            "pointerleave",
+            () => {
+
+                art.style.transform = "";
+
+            }
+        );
+
+    }
+
+    /* =================================================
+       YOUTUBE
+    ================================================= */
+
+    function setupYouTube() {
+
+        youtubeSearchButton.addEventListener(
+            "click",
+            searchYouTube
+        );
+
+        youtubeSearch.addEventListener(
+            "keydown",
+            event => {
+
+                if (
+                    event.key ===
+                    "Enter"
+                ) {
+
+                    searchYouTube();
+
+                }
+
+            }
+        );
+
+    }
+
+    async function searchYouTube() {
+
+        const query =
+            youtubeSearch.value.trim();
+
+        if (!query) {
+            return;
+        }
+
+        youtubeResults.innerHTML =
+            `
+            <div class="youtube-empty">
+                Searching YouTube...
+            </div>
+            `;
+
+        showYouTube();
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/youtube/search?q=${encodeURIComponent(
+                        query
+                    )}`
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    "YouTube search failed"
+                );
+
+            }
+
+            if (
+                !data.success ||
+                !Array.isArray(
+                    data.videos
+                )
+            ) {
+
+                throw new Error(
+                    "Invalid YouTube response"
+                );
+
+            }
+
+            state.youtubeVideos =
+                data.videos;
+
+            renderYouTubeResults();
+
+            if (
+                state.youtubeVideos.length
+            ) {
+
+                playYouTube(
+                    state.youtubeVideos[0]
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                "YouTube error:",
+                error
+            );
+
+            youtubeResults.innerHTML =
+                `
+                <div class="youtube-empty">
+
+                    <strong>
+                        YouTube search unavailable
+                    </strong>
+
+                    <p style="margin-top:10px">
+                        ${escapeHtml(
+                            error.message
+                        )}
+                    </p>
+
+                    <p style="margin-top:10px">
+                        Add YOUTUBE_API_KEY
+                        in Render →
+                        Environment Variables.
+                    </p>
+
+                </div>
+                `;
+
+        }
+
+    }
+
+    function renderYouTubeResults() {
+
+        youtubeResults.innerHTML = "";
+
+        state.youtubeVideos.forEach(
+            video => {
+
+                const card =
+                    document.createElement(
+                        "button"
+                    );
+
+                card.type = "button";
+
+                card.className =
+                    "youtube-card";
+
+                card.innerHTML =
+                    `
+                    <img
+                        src="${escapeAttribute(
+                            video.thumbnail
+                        )}"
+                        alt=""
+                        loading="lazy"
+                    >
+
+                    <div>
+
+                        <strong>
+                            ${escapeHtml(
+                                video.title
+                            )}
+                        </strong>
+
+                        <span>
+                            ${escapeHtml(
+                                video.channel
+                            )}
+                        </span>
+
+                    </div>
+                    `;
+
+                card.addEventListener(
+                    "click",
+                    () =>
+                        playYouTube(video)
+                );
+
+                youtubeResults.appendChild(
+                    card
+                );
+
+            }
+        );
+
+    }
+
+    function playYouTube(video) {
+
+        if (!video || !video.id) {
+            return;
+        }
+
+        state.youtubeCurrentId =
+            video.id;
+
+        youtubePlayer.innerHTML =
+            `
+            <iframe
+                src="https://www.youtube.com/embed/${encodeURIComponent(
+                    video.id
+                )}?autoplay=1&rel=0&modestbranding=1"
+                title="${escapeAttribute(
+                    video.title
+                )}"
+                allow="
+                    autoplay;
+                    encrypted-media;
+                    picture-in-picture;
+                    web-share
+                "
+                allowfullscreen
+                loading="lazy"
+            ></iframe>
+            `;
+
+    }
+
+    /* =================================================
        KEYBOARD
-    ================================================== */
+    ================================================= */
 
     function setupKeyboard() {
 
         document.addEventListener(
             "keydown",
-            (event) => {
+            event => {
+
+                const target =
+                    event.target;
 
                 if (
-                    event.target.tagName ===
-                        "INPUT"
+                    target &&
+                    (
+                        target.tagName ===
+                        "INPUT" ||
+                        target.tagName ===
+                        "TEXTAREA"
+                    )
                 ) {
+
                     return;
+
                 }
 
                 if (
@@ -1403,6 +1796,7 @@
                     event.preventDefault();
 
                     togglePlay();
+
                 }
 
                 if (
@@ -1410,7 +1804,8 @@
                     "ArrowRight"
                 ) {
 
-                    playNext();
+                    nextSong();
+
                 }
 
                 if (
@@ -1418,102 +1813,38 @@
                     "ArrowLeft"
                 ) {
 
-                    playPrevious();
+                    previousSong();
+
                 }
+
             }
         );
+
     }
 
-    /* ==================================================
-       TOUCH
-    ================================================== */
-
-    function setupTouch() {
-
-        let touchStartX = 0;
-
-        document.addEventListener(
-            "touchstart",
-            (event) => {
-
-                if (
-                    !event.touches.length
-                ) {
-                    return;
-                }
-
-                touchStartX =
-                    event.touches[0]
-                        .clientX;
-            },
-            {
-                passive: true
-            }
-        );
-
-        document.addEventListener(
-            "touchend",
-            (event) => {
-
-                if (
-                    !event.changedTouches.length
-                ) {
-                    return;
-                }
-
-                const touchEndX =
-                    event.changedTouches[0]
-                        .clientX;
-
-                const difference =
-                    touchEndX -
-                    touchStartX;
-
-                if (
-                    Math.abs(
-                        difference
-                    ) < 80
-                ) {
-                    return;
-                }
-
-                if (
-                    difference < 0
-                ) {
-                    playNext();
-                } else {
-                    playPrevious();
-                }
-            },
-            {
-                passive: true
-            }
-        );
-    }
-
-    /* ==================================================
-       LOADING
-    ================================================== */
+    /* =================================================
+       HELPERS
+    ================================================= */
 
     function showLoading() {
 
-        songGrid.innerHTML = `
+        songGrid.innerHTML =
+            `
             <div class="empty-state">
 
-                <div class="empty-icon">
-                    ◌
-                </div>
+                <div>♪</div>
 
                 <h3>
                     Loading your music
                 </h3>
 
                 <p>
-                    Scanning the songs folder...
+                    Scanning songs folder...
                 </p>
 
             </div>
-        `;
+            `;
+
     }
 
     function showError(
@@ -1521,12 +1852,11 @@
         message
     ) {
 
-        songGrid.innerHTML = `
+        songGrid.innerHTML =
+            `
             <div class="empty-state">
 
-                <div class="empty-icon">
-                    !
-                </div>
+                <div>!</div>
 
                 <h3>
                     ${escapeHtml(title)}
@@ -1536,32 +1866,20 @@
                     ${escapeHtml(message)}
                 </p>
 
-                <button
-                    class="primary-button liquid-button"
-                    style="margin:20px auto 0"
-                    type="button"
-                    onclick="location.reload()"
-                >
-                    Retry
-                </button>
-
             </div>
-        `;
-    }
+            `;
 
-    /* ==================================================
-       UTILITIES
-    ================================================== */
+    }
 
     function formatTime(seconds) {
 
         if (
-            !Number.isFinite(
-                seconds
-            ) ||
+            !Number.isFinite(seconds) ||
             seconds < 0
         ) {
+
             return "0:00";
+
         }
 
         const minutes =
@@ -1569,46 +1887,37 @@
                 seconds / 60
             );
 
-        const remaining =
+        const secs =
             Math.floor(
                 seconds % 60
-            );
-
-        return (
-            `${minutes}:` +
-            `${remaining
+            )
                 .toString()
-                .padStart(2, "0")}`
-        );
+                .padStart(2, "0");
+
+        return `${minutes}:${secs}`;
+
     }
 
     function escapeHtml(value) {
 
         return String(value)
             .replace(
-                /&/g,
-                "&amp;"
-            )
-            .replace(
-                /</g,
-                "&lt;"
-            )
-            .replace(
-                />/g,
-                "&gt;"
-            )
-            .replace(
-                /"/g,
-                "&quot;"
-            )
-            .replace(
-                /'/g,
-                "&#039;"
+                /[&<>"']/g,
+                character => ({
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#039;"
+                }[character])
             );
+
     }
 
     function escapeAttribute(value) {
+
         return escapeHtml(value);
+
     }
 
 })();
