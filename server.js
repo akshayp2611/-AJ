@@ -10,23 +10,16 @@ const SONGS_DIR = path.join(ROOT, "songs");
 
 app.use(express.json());
 
-// ==================================================
-// FRONTEND STATIC FILES
-// ==================================================
-
+// Serve root frontend files
 app.use(express.static(ROOT, {
   index: false
 }));
 
-// ==================================================
-// SONG FILES
-// ==================================================
-
+// Serve songs
 app.use(
   "/songs",
   express.static(SONGS_DIR, {
     acceptRanges: true,
-
     setHeaders: (res) => {
       res.setHeader("Accept-Ranges", "bytes");
       res.setHeader(
@@ -37,10 +30,7 @@ app.use(
   })
 );
 
-// ==================================================
-// AUDIO SCANNER
-// ==================================================
-
+// Scan music files
 function getAudioFiles(
   dir,
   category = null,
@@ -55,10 +45,10 @@ function getAudioFiles(
   });
 
   for (const item of items) {
+
     const fullPath =
       path.join(dir, item.name);
 
-    // Folder = category
     if (item.isDirectory()) {
 
       getAudioFiles(
@@ -74,63 +64,62 @@ function getAudioFiles(
       path.extname(item.name)
         .toLowerCase();
 
-    const supportedFormats = [
-      ".mp3",
-      ".wav",
-      ".ogg",
-      ".m4a",
-      ".aac",
-      ".flac"
-    ];
+    if (
+      [
+        ".mp3",
+        ".wav",
+        ".ogg",
+        ".m4a",
+        ".aac",
+        ".flac"
+      ].includes(ext)
+    ) {
 
-    if (!supportedFormats.includes(ext)) {
-      continue;
+      const relativePath =
+        path.relative(
+          SONGS_DIR,
+          fullPath
+        );
+
+      const urlPath =
+        relativePath
+          .split(path.sep)
+          .map(encodeURIComponent)
+          .join("/");
+
+      results.push({
+
+        id:
+          results.length + 1,
+
+        title:
+          path.basename(
+            item.name,
+            ext
+          ),
+
+        artist:
+          "स्वरAJ",
+
+        album:
+          category || "Music",
+
+        category:
+          category || "Music",
+
+        cover:
+          "/images/default-cover.svg",
+
+        url:
+          `/songs/${urlPath}`,
+
+        file:
+          relativePath.replace(
+            /\\/g,
+            "/"
+          )
+      });
     }
-
-    const relativePath =
-      path.relative(
-        SONGS_DIR,
-        fullPath
-      );
-
-    const urlPath =
-      relativePath
-        .split(path.sep)
-        .map(encodeURIComponent)
-        .join("/");
-
-    results.push({
-
-      id:
-        `song-${results.length + 1}`,
-
-      title:
-        path.basename(
-          item.name,
-          ext
-        ),
-
-      artist:
-        "स्वरAJ",
-
-      album:
-        category || "Music",
-
-      category:
-        category || "Music",
-
-      cover:
-        "/images/default-cover.svg",
-
-      url:
-        `/songs/${urlPath}`,
-
-      file:
-        relativePath.replace(
-          /\\/g,
-          "/"
-        )
-    });
   }
 
   return results;
@@ -142,10 +131,7 @@ function getSongs() {
   );
 }
 
-// ==================================================
-// HEALTH CHECK
-// ==================================================
-
+// Health
 app.get(
   "/api/health",
   (req, res) => {
@@ -154,28 +140,18 @@ app.get(
       getSongs();
 
     res.json({
-
       status: "ok",
-
-      songsDirectoryExists:
-        fs.existsSync(
-          SONGS_DIR
-        ),
-
-      songCount:
-        songs.length,
-
       songsDirectory:
-        SONGS_DIR
-
+        SONGS_DIR,
+      songsDirectoryExists:
+        fs.existsSync(SONGS_DIR),
+      songCount:
+        songs.length
     });
   }
 );
 
-// ==================================================
-// ALL SONGS
-// ==================================================
-
+// All songs
 app.get(
   "/api/songs",
   (req, res) => {
@@ -186,14 +162,10 @@ app.get(
         getSongs();
 
       res.json({
-
         success: true,
-
         count:
           songs.length,
-
         songs
-
       });
 
     } catch (error) {
@@ -204,77 +176,42 @@ app.get(
       );
 
       res.status(500).json({
-
         success: false,
-
         count: 0,
-
         songs: [],
-
         error:
           error.message
-
       });
     }
   }
 );
 
-// ==================================================
-// CATEGORIES
-// ==================================================
-
+// Categories
 app.get(
   "/api/categories",
   (req, res) => {
 
-    try {
+    const songs =
+      getSongs();
 
-      const songs =
-        getSongs();
-
-      const categories =
-        [
-          ...new Set(
-            songs.map(
-              song =>
-                song.category
-            )
+    const categories =
+      [
+        ...new Set(
+          songs.map(
+            song =>
+              song.category
           )
-        ];
+        )
+      ];
 
-      res.json({
-
-        success: true,
-
-        categories
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "Category error:",
-        error
-      );
-
-      res.status(500).json({
-
-        success: false,
-
-        categories: [],
-
-        error:
-          error.message
-
-      });
-    }
+    res.json({
+      success: true,
+      categories
+    });
   }
 );
 
-// ==================================================
-// SEARCH
-// ==================================================
-
+// Search
 app.get(
   "/api/search",
   (req, res) => {
@@ -292,111 +229,64 @@ app.get(
     if (!query) {
 
       return res.json({
-
         success: true,
-
         count:
           songs.length,
-
         songs
-
       });
     }
 
     const results =
-      songs.filter(song => {
-
-        const text =
-          [
-            song.title,
-            song.artist,
-            song.album,
-            song.category
-          ]
-            .join(" ")
-            .toLowerCase();
-
-        return text.includes(query);
-      });
+      songs.filter(song =>
+        song.title
+          .toLowerCase()
+          .includes(query) ||
+        song.category
+          .toLowerCase()
+          .includes(query)
+      );
 
     res.json({
-
       success: true,
-
       count:
         results.length,
-
       songs:
         results
-
     });
   }
 );
 
-// ==================================================
 // API 404
-// ==================================================
-
 app.use(
   "/api",
   (req, res) => {
 
     res.status(404).json({
-
       success: false,
-
       error:
         "API endpoint not found"
-
     });
   }
 );
 
-// ==================================================
-// FRONTEND
-// ==================================================
-
-// Explicit homepage route
+// Home
 app.get(
   "/",
   (req, res) => {
 
-    const indexFile =
+    res.sendFile(
       path.join(
         ROOT,
         "index.html"
-      );
-
-    if (
-      fs.existsSync(indexFile)
-    ) {
-
-      res.sendFile(
-        indexFile
-      );
-
-    } else {
-
-      res
-        .status(404)
-        .send(
-          "index.html not found"
-        );
-    }
+      )
+    );
   }
 );
 
-// ==================================================
-// FRONTEND FALLBACK
-// ==================================================
-
-// Express 5 compatible fallback.
-// No app.get("*") is used.
-
+// Express 5 compatible frontend fallback
 app.use(
   (req, res, next) => {
 
-    // Don't interfere with APIs
     if (
       req.path.startsWith("/api/")
     ) {
@@ -412,7 +302,6 @@ app.use(
     if (
       fs.existsSync(indexFile)
     ) {
-
       return res.sendFile(
         indexFile
       );
@@ -422,38 +311,22 @@ app.use(
   }
 );
 
-// ==================================================
-// FINAL 404
-// ==================================================
-
+// Final 404
 app.use(
   (req, res) => {
 
     res.status(404).json({
-
       success: false,
-
-      error:
-        "Not found",
-
-      path:
-        req.originalUrl
-
+      error: "Not found"
     });
   }
 );
 
-// ==================================================
-// START SERVER
-// ==================================================
-
+// Start
 app.listen(
   PORT,
   "0.0.0.0",
   () => {
-
-    const songs =
-      getSongs();
 
     console.log(
       "================================="
@@ -472,20 +345,8 @@ app.listen(
     );
 
     console.log(
-      `Songs found: ${songs.length}`
+      `Songs found: ${getSongs().length}`
     );
-
-    songs.forEach(song => {
-
-      console.log(
-        `[${song.category}] ${song.title}`
-      );
-
-      console.log(
-        `URL: ${song.url}`
-      );
-
-    });
 
     console.log(
       "================================="
