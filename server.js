@@ -7,21 +7,55 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const SONGS_DIR = path.join(ROOT, "songs");
+const IMAGES_DIR = path.join(ROOT, "images");
+
+// ==================================================
+// CREATE DIRECTORIES IF MISSING
+// ==================================================
+
+if (!fs.existsSync(SONGS_DIR)) {
+  fs.mkdirSync(SONGS_DIR, {
+    recursive: true
+  });
+}
+
+if (!fs.existsSync(IMAGES_DIR)) {
+  fs.mkdirSync(IMAGES_DIR, {
+    recursive: true
+  });
+}
+
+// ==================================================
+// MIDDLEWARE
+// ==================================================
 
 app.use(express.json());
 
-// Serve root frontend files
-app.use(express.static(ROOT, {
-  index: false
-}));
+// Serve frontend files from project root
+app.use(
+  express.static(ROOT, {
+    index: false
+  })
+);
+
+// Serve images
+app.use(
+  "/images",
+  express.static(IMAGES_DIR)
+);
 
 // Serve songs
 app.use(
   "/songs",
   express.static(SONGS_DIR, {
     acceptRanges: true,
+
     setHeaders: (res) => {
-      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader(
+        "Accept-Ranges",
+        "bytes"
+      );
+
       res.setHeader(
         "Cache-Control",
         "public, max-age=3600"
@@ -30,28 +64,59 @@ app.use(
   })
 );
 
-// Scan music files
-function getAudioFiles(
-  dir,
+// ==================================================
+// AUDIO FILE SCANNER
+// ==================================================
+
+const AUDIO_EXTENSIONS = [
+  ".mp3",
+  ".wav",
+  ".ogg",
+  ".m4a",
+  ".aac",
+  ".flac"
+];
+
+function scanSongs(
+  directory,
   category = null,
   results = []
 ) {
-  if (!fs.existsSync(dir)) {
+  if (!fs.existsSync(directory)) {
     return results;
   }
 
-  const items = fs.readdirSync(dir, {
-    withFileTypes: true
-  });
+  let items;
+
+  try {
+    items = fs.readdirSync(
+      directory,
+      {
+        withFileTypes: true
+      }
+    );
+  } catch (error) {
+    console.error(
+      "Directory scan error:",
+      error
+    );
+
+    return results;
+  }
 
   for (const item of items) {
-
     const fullPath =
-      path.join(dir, item.name);
+      path.join(
+        directory,
+        item.name
+      );
+
+    // ----------------------------------------------
+    // DIRECTORY
+    // ----------------------------------------------
 
     if (item.isDirectory()) {
-
-      getAudioFiles(
+      scanSongs(
         fullPath,
         category || item.name,
         results
@@ -60,78 +125,92 @@ function getAudioFiles(
       continue;
     }
 
-    const ext =
-      path.extname(item.name)
-        .toLowerCase();
+    // ----------------------------------------------
+    // FILE
+    // ----------------------------------------------
+
+    const extension =
+      path.extname(
+        item.name
+      ).toLowerCase();
 
     if (
-      [
-        ".mp3",
-        ".wav",
-        ".ogg",
-        ".m4a",
-        ".aac",
-        ".flac"
-      ].includes(ext)
+      !AUDIO_EXTENSIONS.includes(
+        extension
+      )
     ) {
-
-      const relativePath =
-        path.relative(
-          SONGS_DIR,
-          fullPath
-        );
-
-      const urlPath =
-        relativePath
-          .split(path.sep)
-          .map(encodeURIComponent)
-          .join("/");
-
-      results.push({
-
-        id:
-          results.length + 1,
-
-        title:
-          path.basename(
-            item.name,
-            ext
-          ),
-
-        artist:
-          "स्वरAJ",
-
-        album:
-          category || "Music",
-
-        category:
-          category || "Music",
-
-        cover:
-          "/images/default-cover.svg",
-
-        url:
-          `/songs/${urlPath}`,
-
-        file:
-          relativePath.replace(
-            /\\/g,
-            "/"
-          )
-      });
+      continue;
     }
+
+    const relativePath =
+      path.relative(
+        SONGS_DIR,
+        fullPath
+      );
+
+    const encodedPath =
+      relativePath
+        .split(path.sep)
+        .map(
+          encodeURIComponent
+        )
+        .join("/");
+
+    const title =
+      path.basename(
+        item.name,
+        extension
+      );
+
+    const songCategory =
+      category || "Music";
+
+    results.push({
+      id:
+        `song-${results.length + 1}`,
+
+      title,
+
+      artist:
+        "स्वरAJ",
+
+      album:
+        songCategory,
+
+      category:
+        songCategory,
+
+      cover:
+        "/images/default-cover.svg",
+
+      url:
+        `/songs/${encodedPath}`,
+
+      file:
+        relativePath.replace(
+          /\\/g,
+          "/"
+        )
+    });
   }
 
   return results;
 }
 
+// ==================================================
+// GET SONGS
+// ==================================================
+
 function getSongs() {
-  return getAudioFiles(
+  return scanSongs(
     SONGS_DIR
   );
 }
 
-// Health
+// ==================================================
+// HEALTH API
+// ==================================================
+
 app.get(
   "/api/health",
   (req, res) => {
@@ -141,17 +220,25 @@ app.get(
 
     res.json({
       status: "ok",
-      songsDirectory:
-        SONGS_DIR,
+
       songsDirectoryExists:
-        fs.existsSync(SONGS_DIR),
+        fs.existsSync(
+          SONGS_DIR
+        ),
+
       songCount:
-        songs.length
+        songs.length,
+
+      songsDirectory:
+        SONGS_DIR
     });
   }
 );
 
-// All songs
+// ==================================================
+// SONG API
+// ==================================================
+
 app.get(
   "/api/songs",
   (req, res) => {
@@ -163,22 +250,27 @@ app.get(
 
       res.json({
         success: true,
+
         count:
           songs.length,
+
         songs
       });
 
     } catch (error) {
 
       console.error(
-        "Song scan error:",
+        "Songs API error:",
         error
       );
 
       res.status(500).json({
         success: false,
+
         count: 0,
+
         songs: [],
+
         error:
           error.message
       });
@@ -186,32 +278,53 @@ app.get(
   }
 );
 
-// Categories
+// ==================================================
+// CATEGORY API
+// ==================================================
+
 app.get(
   "/api/categories",
   (req, res) => {
 
-    const songs =
-      getSongs();
+    try {
 
-    const categories =
-      [
-        ...new Set(
-          songs.map(
-            song =>
-              song.category
+      const songs =
+        getSongs();
+
+      const categories =
+        [
+          ...new Set(
+            songs.map(
+              song =>
+                song.category
+            )
           )
-        )
-      ];
+        ];
 
-    res.json({
-      success: true,
-      categories
-    });
+      res.json({
+        success: true,
+
+        categories
+      });
+
+    } catch (error) {
+
+      res.status(500).json({
+        success: false,
+
+        categories: [],
+
+        error:
+          error.message
+      });
+    }
   }
 );
 
-// Search
+// ==================================================
+// SEARCH API
+// ==================================================
+
 app.get(
   "/api/search",
   (req, res) => {
@@ -230,65 +343,107 @@ app.get(
 
       return res.json({
         success: true,
+
         count:
           songs.length,
+
         songs
       });
     }
 
     const results =
-      songs.filter(song =>
-        song.title
-          .toLowerCase()
-          .includes(query) ||
-        song.category
-          .toLowerCase()
-          .includes(query)
+      songs.filter(
+        song => {
+
+          const searchable =
+            [
+              song.title,
+              song.artist,
+              song.album,
+              song.category
+            ]
+              .join(" ")
+              .toLowerCase();
+
+          return searchable.includes(
+            query
+          );
+        }
       );
 
     res.json({
       success: true,
+
       count:
         results.length,
+
       songs:
         results
     });
   }
 );
 
+// ==================================================
 // API 404
+// ==================================================
+
 app.use(
   "/api",
   (req, res) => {
 
     res.status(404).json({
       success: false,
+
       error:
         "API endpoint not found"
     });
   }
 );
 
-// Home
+// ==================================================
+// HOME PAGE
+// ==================================================
+
 app.get(
   "/",
   (req, res) => {
 
-    res.sendFile(
+    const indexFile =
       path.join(
         ROOT,
         "index.html"
+      );
+
+    if (
+      fs.existsSync(
+        indexFile
       )
-    );
+    ) {
+
+      return res.sendFile(
+        indexFile
+      );
+    }
+
+    res
+      .status(404)
+      .send(
+        "index.html not found"
+      );
   }
 );
 
-// Express 5 compatible frontend fallback
+// ==================================================
+// EXPRESS 5 FRONTEND FALLBACK
+// ==================================================
+
 app.use(
   (req, res, next) => {
 
     if (
-      req.path.startsWith("/api/")
+      req.path.startsWith(
+        "/api/"
+      )
     ) {
       return next();
     }
@@ -300,8 +455,11 @@ app.use(
       );
 
     if (
-      fs.existsSync(indexFile)
+      fs.existsSync(
+        indexFile
+      )
     ) {
+
       return res.sendFile(
         indexFile
       );
@@ -311,29 +469,47 @@ app.use(
   }
 );
 
-// Final 404
+// ==================================================
+// FINAL 404
+// ==================================================
+
 app.use(
   (req, res) => {
 
     res.status(404).json({
       success: false,
-      error: "Not found"
+
+      error:
+        "Not found",
+
+      path:
+        req.originalUrl
     });
   }
 );
 
-// Start
+// ==================================================
+// SERVER START
+// ==================================================
+
 app.listen(
   PORT,
   "0.0.0.0",
   () => {
 
+    const songs =
+      getSongs();
+
     console.log(
-      "================================="
+      "=========================================="
     );
 
     console.log(
-      "स्वरAJ Music Server"
+      "        स्वरAJ MUSIC SERVER"
+    );
+
+    console.log(
+      "=========================================="
     );
 
     console.log(
@@ -345,11 +521,33 @@ app.listen(
     );
 
     console.log(
-      `Songs found: ${getSongs().length}`
+      `Songs found: ${songs.length}`
     );
 
+    if (songs.length > 0) {
+
+      songs.forEach(
+        (song, index) => {
+
+          console.log(
+            `${index + 1}. [${song.category}] ${song.title}`
+          );
+
+          console.log(
+            `   ${song.url}`
+          );
+        }
+      );
+
+    } else {
+
+      console.log(
+        "No audio files found."
+      );
+    }
+
     console.log(
-      "================================="
+      "=========================================="
     );
   }
 );
