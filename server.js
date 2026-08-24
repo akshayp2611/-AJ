@@ -4,82 +4,81 @@ const fs = require("fs");
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 const ROOT = __dirname;
 
 const SONGS_DIR = path.join(ROOT, "songs");
 const IMAGES_DIR = path.join(ROOT, "images");
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
+const YOUTUBE_API_KEY =
+    process.env.YOUTUBE_API_KEY ||
+    process.env.YOUTUBE_KEY ||
+    "";
 
-// --------------------------------------------------
-// DIRECTORIES
-// --------------------------------------------------
+const YOUTUBE_API_URL =
+    "https://www.googleapis.com/youtube/v3/search";
+
+/* =========================================================
+   DIRECTORIES
+========================================================= */
 
 if (!fs.existsSync(SONGS_DIR)) {
-    fs.mkdirSync(SONGS_DIR, { recursive: true });
+    fs.mkdirSync(SONGS_DIR, {
+        recursive: true
+    });
 }
 
 if (!fs.existsSync(IMAGES_DIR)) {
-    fs.mkdirSync(IMAGES_DIR, { recursive: true });
+    fs.mkdirSync(IMAGES_DIR, {
+        recursive: true
+    });
 }
 
-// --------------------------------------------------
-// MIDDLEWARE
-// --------------------------------------------------
+/* =========================================================
+   MIDDLEWARE
+========================================================= */
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({
+    limit: "2mb"
+}));
 
-app.use(
-    express.static(ROOT, {
-        extensions: ["html"],
-        index: false,
-        maxAge: "1h"
-    })
-);
+app.use(express.urlencoded({
+    extended: true
+}));
 
-app.use("/songs", express.static(SONGS_DIR));
-app.use("/images", express.static(IMAGES_DIR));
+/* =========================================================
+   STATIC FILES
+========================================================= */
 
-// --------------------------------------------------
-// HEALTH
-// --------------------------------------------------
+app.use(express.static(ROOT, {
+    extensions: ["html"],
+    index: "index.html"
+}));
 
-app.get("/api/health", (req, res) => {
-    res.json({
-        success: true,
-        status: "online",
-        service: "स्वरAJ",
-        songsDirectory: SONGS_DIR,
-        youtubeConfigured: Boolean(YOUTUBE_API_KEY)
-    });
-});
+/* =========================================================
+   HELPERS
+========================================================= */
 
-// --------------------------------------------------
-// SONG SCANNER
-// --------------------------------------------------
-
-const AUDIO_EXTENSIONS = [
-    ".mp3",
-    ".m4a",
-    ".wav",
-    ".ogg",
-    ".aac",
-    ".flac",
-    ".webm"
-];
-
-function cleanName(filename) {
-    return filename
-        .replace(/\.[^/.]+$/, "")
-        .replace(/[_-]+/g, " ")
+function normalizeText(value) {
+    return String(value || "")
         .replace(/\s+/g, " ")
         .trim();
 }
 
-function getCategoryFromRelativePath(relativePath) {
-    const parts = relativePath.split(path.sep);
+function getFileName(file) {
+    return path.basename(file);
+}
+
+function getTitle(file) {
+    return normalizeText(
+        path.basename(file, path.extname(file))
+    );
+}
+
+function getCategory(relativePath) {
+    const parts = relativePath
+        .split(path.sep)
+        .filter(Boolean);
 
     if (parts.length > 1) {
         return parts[0];
@@ -88,166 +87,278 @@ function getCategoryFromRelativePath(relativePath) {
     return "All Songs";
 }
 
-function scanSongs(directory, results = []) {
-    if (!fs.existsSync(directory)) {
-        return results;
-    }
+function getImageForCategory(category) {
+    const safeCategory = String(category)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
 
-    let entries;
+    const possibleFiles = [
+        `${safeCategory}.jpg`,
+        `${safeCategory}.jpeg`,
+        `${safeCategory}.png`,
+        `${safeCategory}.webp`
+    ];
 
-    try {
-        entries = fs.readdirSync(directory, {
-            withFileTypes: true
-        });
-    } catch (error) {
-        console.error("Directory read error:", error);
-        return results;
-    }
-
-    for (const entry of entries) {
-        const fullPath = path.join(directory, entry.name);
-
-        if (entry.isDirectory()) {
-            scanSongs(fullPath, results);
-            continue;
-        }
-
-        const extension = path.extname(entry.name).toLowerCase();
-
-        if (!AUDIO_EXTENSIONS.includes(extension)) {
-            continue;
-        }
-
-        const relativePath = path.relative(
-            SONGS_DIR,
-            fullPath
+    for (const file of possibleFiles) {
+        const fullPath = path.join(
+            IMAGES_DIR,
+            file
         );
 
-        const category =
-            getCategoryFromRelativePath(relativePath);
-
-        const urlPath = relativePath
-            .split(path.sep)
-            .map(encodeURIComponent)
-            .join("/");
-
-        results.push({
-            id: Buffer
-                .from(relativePath)
-                .toString("base64url"),
-
-            title: cleanName(entry.name),
-
-            artist: category,
-
-            category,
-
-            filename: entry.name,
-
-            path: relativePath.replace(/\\/g, "/"),
-
-            url: `/songs/${urlPath}`,
-
-            image: "/images/default-cover.svg"
-        });
+        if (fs.existsSync(fullPath)) {
+            return `/images/${encodeURIComponent(file)}`;
+        }
     }
 
-    return results;
+    const defaults = [
+        "ganpati.jpg",
+        "default.jpg",
+        "cover.jpg",
+        "music.jpg"
+    ];
+
+    for (const file of defaults) {
+        const fullPath = path.join(
+            IMAGES_DIR,
+            file
+        );
+
+        if (fs.existsSync(fullPath)) {
+            return `/images/${encodeURIComponent(file)}`;
+        }
+    }
+
+    return "";
 }
 
-// --------------------------------------------------
-// SONGS API
-// --------------------------------------------------
+/* =========================================================
+   SONG SCANNER
+========================================================= */
+
+function scanSongs() {
+    const songs = [];
+
+    if (!fs.existsSync(SONGS_DIR)) {
+        return songs;
+    }
+
+    function walk(currentDir) {
+        let entries = [];
+
+        try {
+            entries = fs.readdirSync(
+                currentDir,
+                {
+                    withFileTypes: true
+                }
+            );
+        } catch (error) {
+            console.error(
+                "Unable to read:",
+                currentDir,
+                error.message
+            );
+
+            return;
+        }
+
+        for (const entry of entries) {
+            const fullPath = path.join(
+                currentDir,
+                entry.name
+            );
+
+            if (entry.isDirectory()) {
+                walk(fullPath);
+                continue;
+            }
+
+            if (!entry.isFile()) {
+                continue;
+            }
+
+            const extension =
+                path.extname(entry.name)
+                    .toLowerCase();
+
+            const allowed = [
+                ".mp3",
+                ".wav",
+                ".m4a",
+                ".ogg",
+                ".aac",
+                ".flac"
+            ];
+
+            if (!allowed.includes(extension)) {
+                continue;
+            }
+
+            const relativePath =
+                path.relative(
+                    SONGS_DIR,
+                    fullPath
+                );
+
+            const category =
+                getCategory(relativePath);
+
+            const urlPath =
+                relativePath
+                    .split(path.sep)
+                    .map(encodeURIComponent)
+                    .join("/");
+
+            songs.push({
+                id: Buffer.from(
+                    relativePath
+                ).toString("base64url"),
+
+                title: getTitle(entry.name),
+
+                category,
+
+                artist: "स्वरAJ",
+
+                url: `/songs/${urlPath}`,
+
+                image:
+                    getImageForCategory(category),
+
+                filename:
+                    getFileName(entry.name),
+
+                extension
+            });
+        }
+    }
+
+    walk(SONGS_DIR);
+
+    songs.sort((a, b) =>
+        a.title.localeCompare(
+            b.title,
+            undefined,
+            {
+                numeric: true,
+                sensitivity: "base"
+            }
+        )
+    );
+
+    return songs;
+}
+
+/* =========================================================
+   SONG API
+========================================================= */
 
 app.get("/api/songs", (req, res) => {
     try {
-        const songs = scanSongs(SONGS_DIR);
+        const songs = scanSongs();
 
-        songs.sort((a, b) =>
-            a.title.localeCompare(
-                b.title,
-                undefined,
-                {
-                    numeric: true,
-                    sensitivity: "base"
-                }
+        const categories = [
+            ...new Set(
+                songs
+                    .map(song => song.category)
+                    .filter(Boolean)
             )
-        );
+        ].sort();
 
         res.json({
             success: true,
             count: songs.length,
+            categories,
             songs
         });
 
     } catch (error) {
-        console.error("Song scan error:", error);
+        console.error(
+            "Songs API error:",
+            error
+        );
 
         res.status(500).json({
             success: false,
             count: 0,
+            categories: [],
             songs: [],
-            error: "Unable to scan songs"
+            error:
+                "Unable to scan music library."
         });
     }
 });
 
-// --------------------------------------------------
-// CATEGORIES API
-// --------------------------------------------------
+/* =========================================================
+   CATEGORY API
+========================================================= */
 
 app.get("/api/categories", (req, res) => {
     try {
-        const songs = scanSongs(SONGS_DIR);
+        const songs = scanSongs();
 
-        const map = new Map();
+        const categoryMap = {};
 
         for (const song of songs) {
-            const category = song.category || "Other";
+            if (!categoryMap[song.category]) {
+                categoryMap[song.category] = {
+                    name: song.category,
+                    count: 0,
+                    image: song.image
+                };
+            }
 
-            map.set(
-                category,
-                (map.get(category) || 0) + 1
-            );
+            categoryMap[song.category].count++;
         }
-
-        const categories =
-            Array.from(map.entries())
-                .map(([name, count]) => ({
-                    name,
-                    count
-                }))
-                .sort((a, b) =>
-                    a.name.localeCompare(b.name)
-                );
 
         res.json({
             success: true,
-            categories
+            categories:
+                Object.values(categoryMap)
         });
 
     } catch (error) {
-        console.error("Category error:", error);
-
         res.status(500).json({
             success: false,
-            categories: []
+            categories: [],
+            error:
+                "Unable to load categories."
         });
     }
 });
 
-// --------------------------------------------------
-// YOUTUBE SEARCH
-// --------------------------------------------------
+/* =========================================================
+   YOUTUBE CONFIG STATUS
+========================================================= */
+
+app.get("/api/youtube/status", (req, res) => {
+    res.json({
+        success: true,
+
+        configured:
+            Boolean(
+                YOUTUBE_API_KEY &&
+                YOUTUBE_API_KEY.trim()
+            ),
+
+        provider: "YouTube Data API v3"
+    });
+});
+
+/* =========================================================
+   YOUTUBE SEARCH
+========================================================= */
 
 app.get("/api/youtube/search", async (req, res) => {
     const query =
-        String(req.query.q || "").trim();
+        normalizeText(req.query.q);
 
     if (!query) {
         return res.status(400).json({
             success: false,
-            error: "Search query is required"
+            videos: [],
+            error:
+                "Please enter a YouTube search query."
         });
     }
 
@@ -255,6 +366,7 @@ app.get("/api/youtube/search", async (req, res) => {
         return res.status(503).json({
             success: false,
             configured: false,
+            videos: [],
             error:
                 "YouTube API is not configured. Add YOUTUBE_API_KEY to your Render environment variables."
         });
@@ -263,194 +375,265 @@ app.get("/api/youtube/search", async (req, res) => {
     try {
         const params = new URLSearchParams({
             part: "snippet",
+
             q: query,
+
             type: "video",
+
             maxResults: "12",
+
             videoEmbeddable: "true",
+
+            videoSyndicated: "true",
+
+            regionCode: "IN",
+
             key: YOUTUBE_API_KEY
         });
 
         const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?${params}`
+            `${YOUTUBE_API_URL}?${params.toString()}`
         );
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
         if (!response.ok) {
             console.error(
                 "YouTube API error:",
-                data
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                )
             );
 
-            return res.status(response.status).json({
+            const reason =
+                data?.error?.errors?.[0]?.reason;
+
+            let message =
+                "YouTube search failed.";
+
+            if (
+                reason ===
+                "quotaExceeded"
+            ) {
+                message =
+                    "YouTube API quota has been exceeded.";
+            }
+
+            if (
+                reason ===
+                "keyInvalid"
+            ) {
+                message =
+                    "The YouTube API key is invalid.";
+            }
+
+            if (
+                reason ===
+                "accessNotConfigured"
+            ) {
+                message =
+                    "YouTube Data API v3 is not enabled for this Google Cloud project.";
+            }
+
+            return res.status(
+                response.status
+            ).json({
                 success: false,
-                error:
-                    data?.error?.message ||
-                    "YouTube API request failed"
+                configured: true,
+                videos: [],
+                error: message
             });
         }
 
         const videos =
-            (data.items || [])
-                .filter(
-                    item =>
-                        item.id &&
-                        item.id.videoId
-                )
-                .map(item => ({
-                    id: item.id.videoId,
+            Array.isArray(data.items)
+                ? data.items
+                    .filter(
+                        item =>
+                            item?.id?.videoId
+                    )
+                    .map(item => ({
+                        id:
+                            item.id.videoId,
 
-                    title:
-                        item.snippet?.title ||
-                        "YouTube Video",
+                        title:
+                            item.snippet?.title ||
+                            "YouTube Video",
 
-                    channel:
-                        item.snippet?.channelTitle ||
-                        "YouTube",
+                        description:
+                            item.snippet?.description ||
+                            "",
 
-                    description:
-                        item.snippet?.description ||
-                        "",
+                        channel:
+                            item.snippet?.channelTitle ||
+                            "YouTube",
 
-                    thumbnail:
-                        item.snippet?.thumbnails?.high?.url ||
-                        item.snippet?.thumbnails?.medium?.url ||
-                        item.snippet?.thumbnails?.default?.url ||
-                        ""
-                }));
+                        publishedAt:
+                            item.snippet?.publishedAt ||
+                            "",
+
+                        thumbnail:
+                            item.snippet?.thumbnails
+                                ?.high?.url ||
+                            item.snippet?.thumbnails
+                                ?.medium?.url ||
+                            item.snippet?.thumbnails
+                                ?.default?.url ||
+                            "",
+
+                        url:
+                            `https://www.youtube.com/watch?v=${item.id.videoId}`
+                    }))
+                : [];
 
         res.json({
             success: true,
+            configured: true,
+            query,
             count: videos.length,
             videos
         });
 
     } catch (error) {
         console.error(
-            "YouTube search error:",
+            "YouTube request failed:",
             error
         );
 
         res.status(500).json({
             success: false,
-            error: "Unable to search YouTube"
+            configured: true,
+            videos: [],
+            error:
+                "Unable to connect to YouTube. Please try again."
         });
     }
 });
 
-// --------------------------------------------------
-// YOUTUBE CONFIG
-// --------------------------------------------------
+/* =========================================================
+   HEALTH CHECK
+========================================================= */
 
-app.get("/api/youtube/status", (req, res) => {
+app.get("/api/health", (req, res) => {
+    const songs = scanSongs();
+
     res.json({
         success: true,
-        configured: Boolean(YOUTUBE_API_KEY)
+
+        status: "ok",
+
+        service: "स्वरAJ",
+
+        songs:
+            songs.length,
+
+        youtube:
+            Boolean(
+                YOUTUBE_API_KEY
+            ),
+
+        node:
+            process.version,
+
+        environment:
+            process.env.NODE_ENV ||
+            "development"
     });
 });
 
-// --------------------------------------------------
-// ROOT
-// --------------------------------------------------
+/* =========================================================
+   IMAGE FALLBACK
+========================================================= */
 
-app.get("/", (req, res) => {
-    res.sendFile(
-        path.join(ROOT, "index.html")
-    );
-});
-
-// --------------------------------------------------
-// SAFE SPA FALLBACK
-// IMPORTANT:
-// Do NOT use app.get("*")
-// --------------------------------------------------
-
-app.use((req, res, next) => {
-    if (
-        req.method === "GET" &&
-        !req.path.startsWith("/api/") &&
-        !req.path.startsWith("/songs/") &&
-        !req.path.startsWith("/images/") &&
-        !path.extname(req.path)
-    ) {
-        return res.sendFile(
-            path.join(ROOT, "index.html")
+app.get("/images/:filename", (req, res, next) => {
+    const filename =
+        path.basename(
+            req.params.filename
         );
+
+    const file =
+        path.join(
+            IMAGES_DIR,
+            filename
+        );
+
+    if (
+        fs.existsSync(file) &&
+        fs.statSync(file).isFile()
+    ) {
+        return res.sendFile(file);
     }
 
     next();
 });
 
-// --------------------------------------------------
-// 404
-// --------------------------------------------------
+/* =========================================================
+   EXPRESS 5 SPA FALLBACK
+   IMPORTANT:
+   DO NOT USE app.get("*")
+========================================================= */
+
+app.use((req, res, next) => {
+    if (
+        req.method !== "GET" ||
+        req.path.startsWith("/api/")
+    ) {
+        return next();
+    }
+
+    const indexFile =
+        path.join(
+            ROOT,
+            "index.html"
+        );
+
+    if (fs.existsSync(indexFile)) {
+        return res.sendFile(indexFile);
+    }
+
+    next();
+});
+
+/* =========================================================
+   404
+========================================================= */
 
 app.use((req, res) => {
-    if (req.path.startsWith("/api/")) {
+    if (
+        req.path.startsWith("/api/")
+    ) {
         return res.status(404).json({
             success: false,
-            error: "API endpoint not found"
+            error: "API endpoint not found."
         });
     }
 
-    res.status(404).send("Not Found");
+    res.status(404).send(
+        "Page not found."
+    );
 });
 
-// --------------------------------------------------
-// ERROR HANDLER
-// --------------------------------------------------
+/* =========================================================
+   START
+========================================================= */
 
-app.use((error, req, res, next) => {
-    console.error(error);
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(
+        `स्वरAJ server running on port ${PORT}`
+    );
 
-    if (res.headersSent) {
-        return next(error);
-    }
+    console.log(
+        `Songs directory: ${SONGS_DIR}`
+    );
 
-    res.status(500).json({
-        success: false,
-        error: "Internal server error"
-    });
+    console.log(
+        `YouTube API: ${
+            YOUTUBE_API_KEY
+                ? "CONFIGURED"
+                : "NOT CONFIGURED"
+        }`
+    );
 });
-
-// --------------------------------------------------
-// START
-// --------------------------------------------------
-
-app.listen(
-    PORT,
-    "0.0.0.0",
-    () => {
-        console.log(
-            "========================================"
-        );
-
-        console.log(
-            "          स्वरAJ Music Server"
-        );
-
-        console.log(
-            "========================================"
-        );
-
-        console.log(
-            `Port: ${PORT}`
-        );
-
-        console.log(
-            `Songs: ${SONGS_DIR}`
-        );
-
-        console.log(
-            `YouTube: ${
-                YOUTUBE_API_KEY
-                    ? "Configured"
-                    : "Not configured"
-            }`
-        );
-
-        console.log(
-            "Server ready"
-        );
-    }
-);
